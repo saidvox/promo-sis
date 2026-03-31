@@ -23,12 +23,9 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true,
-    "compilerOptions": {
-      // ... resto de config
-      "baseUrl": ".",
-      "paths": {
-        "@/*": ["./src/*"]
-      }
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
     }
   },
   "include": ["src"]
