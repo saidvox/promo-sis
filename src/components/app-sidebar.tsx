@@ -25,27 +25,27 @@ const data = {
   navMain: [
     {
       title: "Dashboard",
-      url: "/",
+      url: "dashboard",
       icon: <LayoutDashboardIcon />,
     },
     {
       title: "Participantes",
-      url: "/students",
+      url: "students",
       icon: <UsersIcon />,
     },
     {
       title: "Pagos",
-      url: "/payments",
+      url: "payments",
       icon: <BanknoteIcon />,
     },
     {
       title: "Egresos",
-      url: "/expenses",
+      url: "expenses",
       icon: <TrendingDownIcon />,
     },
     {
       title: "Configuración Cuotas",
-      url: "/settings/fees",
+      url: "settings",
       icon: <Settings2Icon />,
     },
   ],
@@ -69,7 +69,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               render={<a href="#" />}
             >
               <CommandIcon className="size-5!" />
-              <span className="text-base font-semibold">Acme Inc.</span>
+              <span className="text-base font-semibold">Promoción Sistemas</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>

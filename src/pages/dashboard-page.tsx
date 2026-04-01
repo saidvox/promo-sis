@@ -20,7 +20,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { DollarSign, Activity, CreditCard, Users } from 'lucide-react'
 
 // Constants
-const GOAL_AMOUNT = 15000 
+const GOAL_AMOUNT = 100000 
 
 export function DashboardPage() {
   const { data: stats, isLoading: isStatsLoading, error: statsError } = useDashboardStats()
@@ -196,7 +196,7 @@ export function DashboardPage() {
                ) : (
                  <>
                   <div className="flex w-full items-center justify-between">
-                    <span className="text-sm font-medium">Fiesta de Gala S/ {GOAL_AMOUNT}</span>
+                    <span className="text-sm font-medium">Fiesta de Gala S/ {GOAL_AMOUNT.toLocaleString('es-PE')}</span>
                     <span className="text-sm font-medium text-muted-foreground">{progressPercentage.toFixed(1)}%</span>
                   </div>
                   <div className="relative h-2 w-full overflow-hidden rounded-full bg-secondary">

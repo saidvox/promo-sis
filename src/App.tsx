@@ -8,6 +8,32 @@ import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar'
 import { AppSidebar } from '@/components/app-sidebar'
 import { SiteHeader } from '@/components/site-header'
 
+import { NavigationProvider, useNavigation } from '@/hooks/use-navigation'
+import { StudentsPage } from '@/pages/students-page'
+import { PaymentsPage } from '@/pages/payments-page'
+
+function MainContent() {
+  const { currentPage } = useNavigation()
+
+  return (
+    <SidebarProvider>
+      <AppSidebar />
+      <SidebarInset>
+        <SiteHeader title={
+          currentPage === 'dashboard' ? 'Dashboard Principal' :
+          currentPage === 'students' ? 'Gestión de Participantes' :
+          currentPage === 'payments' ? 'Registro de Pagos' :
+          currentPage === 'expenses' ? 'Control de Egresos' :
+          'Configuración'
+        } />
+        {currentPage === 'dashboard' && <DashboardPage />}
+        {currentPage === 'students' && <StudentsPage />}
+        {currentPage === 'payments' && <PaymentsPage />}
+      </SidebarInset>
+    </SidebarProvider>
+  )
+}
+
 function App() {
   const { session, isInitializing } = useAuth()
 
@@ -31,13 +57,9 @@ function App() {
         {!session ? (
           <LoginPage />
         ) : (
-          <SidebarProvider>
-            <AppSidebar />
-            <SidebarInset>
-              <SiteHeader title="Dashboard Principal" />
-              <DashboardPage />
-            </SidebarInset>
-          </SidebarProvider>
+          <NavigationProvider>
+            <MainContent />
+          </NavigationProvider>
         )}
       </TooltipProvider>
     </ThemeProvider>

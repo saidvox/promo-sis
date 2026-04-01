@@ -71,6 +71,41 @@ export type Database = {
           },
         ]
       }
+      inscripciones: {
+        Row: {
+          created_at: string
+          id: string
+          metodo_pago: string | null
+          monto: number
+          perfil_id: string
+          url_voucher: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          metodo_pago?: string | null
+          monto?: number
+          perfil_id: string
+          url_voucher?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          metodo_pago?: string | null
+          monto?: number
+          perfil_id?: string
+          url_voucher?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inscripciones_perfil_id_fkey"
+            columns: ["perfil_id"]
+            isOneToOne: true
+            referencedRelation: "perfiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pagos: {
         Row: {
           created_at: string | null
@@ -127,6 +162,7 @@ export type Database = {
           id: string
           nombre_completo: string
           rol: Database["public"]["Enums"]["user_role"] | null
+          telefono: string | null
           updated_at: string | null
         }
         Insert: {
@@ -136,6 +172,7 @@ export type Database = {
           id: string
           nombre_completo: string
           rol?: Database["public"]["Enums"]["user_role"] | null
+          telefono?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -145,6 +182,7 @@ export type Database = {
           id?: string
           nombre_completo?: string
           rol?: Database["public"]["Enums"]["user_role"] | null
+          telefono?: string | null
           updated_at?: string | null
         }
         Relationships: []
@@ -160,6 +198,7 @@ export type Database = {
       estado_pago: "Pendiente" | "Pagado" | "Rechazado"
       user_role:
         | "Presidente"
+        | "Sub Presidente"
         | "Secretaria"
         | "Tesorero"
         | "Logistica"

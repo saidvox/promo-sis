@@ -2,7 +2,7 @@ import useSWR from 'swr'
 import { supabase } from '@/lib/supabase/client'
 import type { Database } from '@/types/database.types'
 
-type Perfil = Database['public']['Tables']['perfiles']['Row']
+export type Perfil = Database['public']['Tables']['perfiles']['Row']
 
 /**
  * Data fetching hook para obtener perfiles aplicando 'client-swr-dedup'.
