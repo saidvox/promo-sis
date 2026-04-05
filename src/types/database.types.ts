@@ -16,6 +16,7 @@ export type Database = {
           id: string
           mes_nombre: string
           monto: number
+          fecha_vencimiento: string | null
           updated_at: string | null
         }
         Insert: {
@@ -24,6 +25,7 @@ export type Database = {
           id?: string
           mes_nombre: string
           monto: number
+          fecha_vencimiento?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -32,6 +34,7 @@ export type Database = {
           id?: string
           mes_nombre?: string
           monto?: number
+          fecha_vencimiento?: string | null
           updated_at?: string | null
         }
         Relationships: []
@@ -40,6 +43,10 @@ export type Database = {
         Row: {
           concepto: string
           created_at: string | null
+          descripcion: string | null
+          categoria: string
+          estado: string
+          fecha_programada: string | null
           id: string
           monto: number
           perfil_id: string | null
@@ -48,6 +55,10 @@ export type Database = {
         Insert: {
           concepto: string
           created_at?: string | null
+          descripcion?: string | null
+          categoria?: string
+          estado?: string
+          fecha_programada?: string | null
           id?: string
           monto: number
           perfil_id?: string | null
@@ -56,6 +67,10 @@ export type Database = {
         Update: {
           concepto?: string
           created_at?: string | null
+          descripcion?: string | null
+          categoria?: string
+          estado?: string
+          fecha_programada?: string | null
           id?: string
           monto?: number
           perfil_id?: string | null

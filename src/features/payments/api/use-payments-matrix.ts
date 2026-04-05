@@ -2,8 +2,8 @@ import useSWR from 'swr'
 import { supabase } from '@/lib/supabase/client'
 import type { Database } from '@/types/database.types'
 
-type PerfilRow = Pick<Database['public']['Tables']['perfiles']['Row'], 'id' | 'nombre_completo' | 'dni' | 'rol'>
-type CuotaRow = Pick<Database['public']['Tables']['config_cuotas']['Row'], 'id' | 'mes_nombre' | 'monto'>
+type PerfilRow = Pick<Database['public']['Tables']['perfiles']['Row'], 'id' | 'nombre_completo' | 'dni' | 'rol' | 'codigo_u'>
+type CuotaRow = Pick<Database['public']['Tables']['config_cuotas']['Row'], 'id' | 'mes_nombre' | 'monto' | 'fecha_vencimiento'>
 type PagoRow = Database['public']['Tables']['pagos']['Row']
 
 export const MESES_DEL_ANO = [
@@ -34,12 +34,12 @@ export const usePaymentsMatrix = () => {
         .from('inscripciones')
         .select(`
           perfil_id,
-          perfil:perfiles(id, nombre_completo, dni, rol)
+          perfil:perfiles(id, nombre_completo, dni, rol, codigo_u)
         `),
         
       supabase
         .from('config_cuotas')
-        .select('id, mes_nombre, monto')
+        .select('id, mes_nombre, monto, fecha_vencimiento')
         .eq('activo', true),
 
       supabase
@@ -57,7 +57,7 @@ export const usePaymentsMatrix = () => {
     const perfilesInscritos = inscripciones
       .map(i => i.perfil)
       .filter(Boolean)
-      .sort((a, b) => a.nombre_completo.localeCompare(b.nombre_completo))
+      .sort((a, b) => a.nombre_completo.localeCompare(b.nombre_completo, 'es', { sensitivity: 'base' }))
 
     const cuotasArray = cuotasResult.data as CuotaRow[]
     const pagosArray = pagosResult.data as PagoRow[]

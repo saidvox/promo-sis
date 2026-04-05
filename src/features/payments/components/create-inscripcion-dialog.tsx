@@ -94,6 +94,7 @@ export function CreateInscripcionDialog() {
       // Invalidar todos los arreglos de historial y matrices
       mutate('api/inscripciones')
       mutate('api/payments-matrix')
+      mutate('api/students') // Refrescar columna "Inscripción" en Participantes
       
       handleOpenChange(false)
     } catch (error: any) {

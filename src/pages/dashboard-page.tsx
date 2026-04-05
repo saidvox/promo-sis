@@ -110,7 +110,7 @@ export function DashboardPage() {
                 {stats?.pendingStudentsCount}
               </div>
             )}
-            <p className="text-xs text-muted-foreground mt-1">Con facturas emitidas sin abonar</p>
+            <p className="text-xs text-muted-foreground mt-1">Con al menos un mes activo sin completar</p>
           </CardContent>
         </Card>
       </div>

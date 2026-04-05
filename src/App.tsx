@@ -11,6 +11,8 @@ import { SiteHeader } from '@/components/site-header'
 import { NavigationProvider, useNavigation } from '@/hooks/use-navigation'
 import { StudentsPage } from '@/pages/students-page'
 import { PaymentsPage } from '@/pages/payments-page'
+import { SettingsPage } from '@/pages/settings-page'
+import { ExpensesPage } from '@/pages/expenses-page'
 
 function MainContent() {
   const { currentPage } = useNavigation()
@@ -29,6 +31,8 @@ function MainContent() {
         {currentPage === 'dashboard' && <DashboardPage />}
         {currentPage === 'students' && <StudentsPage />}
         {currentPage === 'payments' && <PaymentsPage />}
+        {currentPage === 'expenses' && <ExpensesPage />}
+        {currentPage === 'settings' && <SettingsPage />}
       </SidebarInset>
     </SidebarProvider>
   )

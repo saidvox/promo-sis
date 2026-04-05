@@ -1,7 +1,7 @@
 import { memo } from 'react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { CheckIcon, LinkIcon, DotIcon } from 'lucide-react'
+import { LinkIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { Database } from '@/types/database.types'
 
@@ -10,7 +10,6 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
-import { getPaymentStatusColor } from '../utils/get-status-color'
 
 type PagoRow = Database['public']['Tables']['pagos']['Row']
 
@@ -34,18 +33,19 @@ export const PaymentMatrixCell = memo(function PaymentMatrixCell({
   onCellClick,
 }: PaymentMatrixCellProps) {
 
+  // Event handler común para abrir el modal (insertar o añadir fondos)
+  const handleClick = () => onCellClick(perfilId, cuotaId)
+
   // Caso 1: No existe pago registrado (Pendiente absoluto)
   if (!pago) {
     return (
       <button
         type="button"
-        onClick={() => onCellClick(perfilId, cuotaId)}
-        className="group relative flex h-full w-full items-center justify-center p-2 outline-none"
-        title="Registrar pago"
+        onClick={handleClick}
+        className="group flex h-10 w-full items-center justify-center outline-none transition-colors hover:bg-muted/50 cursor-pointer"
+        title="Registrar nuevo abono"
       >
-        <div className="flex h-6 w-6 items-center justify-center rounded-full bg-secondary text-muted-foreground transition-all duration-200 group-hover:scale-110 group-hover:bg-primary/20 group-hover:text-primary">
-          <span className="sr-only">Pendiente</span>
-        </div>
+        <div className="h-2 w-2 rounded-full bg-rose-500/80 shadow-[0_0_8px_rgba(244,63,94,0.4)] transition-all duration-200 group-hover:scale-150 group-hover:bg-rose-600"></div>
       </button>
     )
   }
@@ -55,26 +55,35 @@ export const PaymentMatrixCell = memo(function PaymentMatrixCell({
   const isPending = pago.estado === 'Pendiente'
   const isRejected = pago.estado === 'Rechazado'
 
+  // Si está completo (Verde), Si está incompleto (Naranja), Si está rechazado (Rojo oscuro)
   const cellContent = (
-    <div className={cn(
-      "flex h-8 w-full min-w-[3rem] items-center justify-center gap-1.5 rounded-md px-2 text-xs font-medium cursor-default",
-      getPaymentStatusColor(pago.estado)
-    )}>
-      {isPaid && <CheckIcon className="h-3.5 w-3.5" />}
-      {isPending && <DotIcon className="h-4 w-4" />}
-      {isRejected && <span className="text-[10px] uppercase tracking-wider">RECHAZ.</span>}
-      {isPaid && <span>S/ {pago.monto_pagado}</span>}
-    </div>
+    <button
+      type="button"
+      onClick={isPaid ? undefined : handleClick}
+      className={cn(
+        "group flex h-6 min-w-[36px] px-1 items-center justify-center rounded text-[10px] font-medium transition-colors outline-none",
+        isPaid ? "bg-emerald-500/10 text-emerald-600 cursor-default" : "cursor-pointer hover:bg-amber-500/20 active:scale-95",
+        isPending && "bg-amber-500/15 text-amber-600 shadow-[0_0_6px_rgba(245,158,11,0.2)]",
+        isRejected && "bg-rose-500/10 text-rose-600"
+      )}
+      title={isPaid ? "Pago completado" : "Abono parcial - Clic para completar"}
+    >
+      {isPaid && <span>{pago.monto_pagado}</span>}
+      {isPending && <span className="tabular-nums">S/ {pago.monto_pagado}</span>}
+      {isRejected && <span className="font-bold">Rechazado</span>}
+    </button>
   )
 
   // Si tiene voucher o estado especial, lo envolvemos en un tooltip descriptivo
   if (pago.url_voucher || pago.created_at) {
     return (
       <Tooltip>
-        <TooltipTrigger className="flex h-full w-full items-center justify-center p-1.5 outline-none">
-          {cellContent}
-        </TooltipTrigger>
-        <TooltipContent side="top" className="flex max-w-xs flex-col gap-1 p-3">
+        <TooltipTrigger render={
+          <div className="flex h-10 w-full items-center justify-center p-1.5 focus:outline-none">
+            {cellContent}
+          </div>
+        } />
+        <TooltipContent side="top" className="flex max-w-xs flex-col gap-1 p-3 z-50">
           <p className="font-semibold text-sm">Detalles de Transacción</p>
           {pago.created_at && (
             <p className="text-xs text-muted-foreground">
@@ -98,9 +107,9 @@ export const PaymentMatrixCell = memo(function PaymentMatrixCell({
     )
   }
 
-  // Celda renderizada si pagó pero no adjuntó ningún detalle adicional
+  // Celda renderizada si pagó pero no adjuntó ningún comprobante adicional
   return (
-    <div className="flex h-full w-full items-center justify-center p-1.5">
+    <div className="flex h-10 w-full items-center justify-center p-1">
       {cellContent}
     </div>
   )
