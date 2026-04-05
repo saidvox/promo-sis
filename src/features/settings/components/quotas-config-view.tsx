@@ -25,6 +25,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { DatePicker } from '@/components/ui/date-picker'
 
 export function QuotasConfigView() {
   const { data, isLoading, error, saveQuota, deleteQuota } = useQuotas()
@@ -106,9 +107,9 @@ export function QuotasConfigView() {
         <Table>
           <TableHeader className="bg-secondary/40">
             <TableRow>
-              <TableHead className="w-[180px]">Mes</TableHead>
+              <TableHead className="w-[140px] sm:w-[180px]">Mes</TableHead>
               <TableHead>Monto (S/)</TableHead>
-              <TableHead>Fecha Límite</TableHead>
+              <TableHead className="hidden sm:table-cell">Fecha Límite</TableHead>
               <TableHead className="text-right">Gestión</TableHead>
             </TableRow>
           </TableHeader>
@@ -133,12 +134,12 @@ export function QuotasConfigView() {
                   </TableCell>
                   <TableCell>
                     {isActive && config.fecha_vencimiento ? (
-                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <div className="hidden sm:flex items-center gap-1.5 text-xs text-muted-foreground">
                         <CalendarIcon className="h-3.5 w-3.5" />
                         {format(new Date(`${config.fecha_vencimiento}T00:00:00`), 'dd MMM yyyy', { locale: es })}
                       </div>
                     ) : (
-                      <span className="text-muted-foreground text-xs">{isActive ? 'Sin fecha' : '-'}</span>
+                      <span className="hidden sm:inline text-muted-foreground text-xs">{isActive ? 'Sin fecha' : '-'}</span>
                     )}
                   </TableCell>
                   <TableCell className="text-right">
@@ -208,11 +209,11 @@ export function QuotasConfigView() {
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="fecha">Fecha Límite (Productora) <span className="text-muted-foreground text-xs font-normal ml-1">(Opcional)</span></Label>
-                <Input
-                  id="fecha"
-                  type="date"
-                  value={fechaVencimiento}
-                  onChange={(e) => setFechaVencimiento(e.target.value)}
+                <DatePicker
+                  date={fechaVencimiento}
+                  onChange={setFechaVencimiento}
+                  disabled={isSaving}
+                  placeholder="Sin fecha límite"
                   className="w-full text-sm font-medium"
                 />
               </div>

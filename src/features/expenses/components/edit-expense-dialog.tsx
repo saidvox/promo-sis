@@ -17,6 +17,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { DatePicker } from '@/components/ui/date-picker'
 
 import type { EgresoRow } from '../api/use-expenses'
 
@@ -150,12 +151,11 @@ export function EditExpenseDialog({ open, onOpenChange, egreso }: EditExpenseDia
 
             <div className="grid gap-2">
               <Label htmlFor="edit-fecha">Fecha Programada</Label>
-              <Input
-                id="edit-fecha"
-                type="date"
-                value={fechaProgramada}
-                onChange={(e) => setFechaProgramada(e.target.value)}
+              <DatePicker
+                date={fechaProgramada}
+                onChange={setFechaProgramada}
                 disabled={isSubmitting}
+                placeholder="Selecciona la fecha de pago"
               />
             </div>
           </div>

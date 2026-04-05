@@ -14,7 +14,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
-import { LayoutDashboardIcon, UsersIcon, BanknoteIcon, TrendingDownIcon, Settings2Icon, CommandIcon } from "lucide-react"
+import { LayoutDashboardIcon, UsersIcon, BanknoteIcon, TrendingDownIcon, SparklesIcon, Settings2Icon, CommandIcon } from "lucide-react"
 
 const data = {
   user: {
@@ -44,6 +44,12 @@ const data = {
       icon: <TrendingDownIcon />,
     },
     {
+      title: "Actividades",
+      url: "activities",
+      icon: <SparklesIcon />,
+      badge: "Próximamente",
+    },
+    {
       title: "Configuración Cuotas",
       url: "settings",
       icon: <Settings2Icon />,
@@ -51,12 +57,12 @@ const data = {
   ],
 }
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const { session } = useAuth()
+  const { session, profile } = useAuth()
 
-  const userData = session?.user ? {
-    name: session.user.user_metadata?.nombre_completo || session.user.email?.split('@')[0] || "Administrador",
-    email: session.user.email || "",
-    avatar: "",
+  const userData = profile ? {
+    name: profile.nombre_completo || "Administrador",
+    email: session?.user?.email || "",
+    avatar: profile.avatar_url || "",
   } : data.user
 
   return (

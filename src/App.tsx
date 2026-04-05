@@ -13,6 +13,7 @@ import { StudentsPage } from '@/pages/students-page'
 import { PaymentsPage } from '@/pages/payments-page'
 import { SettingsPage } from '@/pages/settings-page'
 import { ExpensesPage } from '@/pages/expenses-page'
+import { SparklesIcon } from 'lucide-react'
 
 function MainContent() {
   const { currentPage } = useNavigation()
@@ -26,12 +27,26 @@ function MainContent() {
           currentPage === 'students' ? 'Gestión de Participantes' :
           currentPage === 'payments' ? 'Registro de Pagos' :
           currentPage === 'expenses' ? 'Control de Egresos' :
+          currentPage === 'activities' ? 'Actividades de Recaudación' :
           'Configuración'
         } />
         {currentPage === 'dashboard' && <DashboardPage />}
         {currentPage === 'students' && <StudentsPage />}
         {currentPage === 'payments' && <PaymentsPage />}
         {currentPage === 'expenses' && <ExpensesPage />}
+        {currentPage === 'activities' && (
+          <div className="flex flex-1 items-center justify-center p-4">
+            <div className="text-center space-y-4">
+              <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-primary/10 ring-1 ring-primary/20">
+                <SparklesIcon className="h-10 w-10 text-primary animate-pulse" />
+              </div>
+              <h2 className="text-2xl font-bold tracking-tight">Próximamente</h2>
+              <p className="text-muted-foreground max-w-xs mx-auto">
+                Estamos preparando este módulo para gestionar actividades de recaudación adicionales (rifas, eventos, etc).
+              </p>
+            </div>
+          </div>
+        )}
         {currentPage === 'settings' && <SettingsPage />}
       </SidebarInset>
     </SidebarProvider>

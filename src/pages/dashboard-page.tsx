@@ -40,92 +40,90 @@ export function DashboardPage() {
   }
 
   return (
-    <div className="flex-1 space-y-4 p-6">
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {/* Card 1: Total Recaudado */}
+    <div className="flex-1 space-y-4 p-4 sm:p-6">
+      {/* Stats Grid: 2 cols on mobile, 4 on large */}
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Recaudado</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-4 pt-4">
+            <CardTitle className="text-xs sm:text-sm font-medium leading-tight">Recaudado</CardTitle>
+            <DollarSign className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground shrink-0" />
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-4 pb-4">
             {isStatsLoading ? (
               <Skeleton className="h-7 w-24" />
             ) : (
-              <div className="text-2xl font-bold">
+              <div className="text-lg sm:text-2xl font-bold tabular-nums">
                 S/ {stats?.totalIncome.toLocaleString('es-PE', { minimumFractionDigits: 2 })}
               </div>
             )}
-            <p className="text-xs text-muted-foreground mt-1">Ingresos históricos confirmados</p>
+            <p className="text-xs text-muted-foreground mt-1 hidden sm:block">Ingresos históricos confirmados</p>
           </CardContent>
         </Card>
 
-        {/* Card 2: Total Egresos */}
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Egresos</CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-4 pt-4">
+            <CardTitle className="text-xs sm:text-sm font-medium leading-tight">Egresos</CardTitle>
+            <Activity className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground shrink-0" />
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-4 pb-4">
             {isStatsLoading ? (
               <Skeleton className="h-7 w-24" />
             ) : (
-              <div className="text-2xl font-bold">
+              <div className="text-lg sm:text-2xl font-bold tabular-nums">
                 S/ {stats?.totalExpenses.toLocaleString('es-PE', { minimumFractionDigits: 2 })}
               </div>
             )}
-            <p className="text-xs text-muted-foreground mt-1">Gastos registrados totales</p>
+            <p className="text-xs text-muted-foreground mt-1 hidden sm:block">Gastos registrados totales</p>
           </CardContent>
         </Card>
 
-        {/* Card 3: Saldo en Caja */}
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Saldo en Caja</CardTitle>
-            <CreditCard className="h-4 w-4 text-muted-foreground" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-4 pt-4">
+            <CardTitle className="text-xs sm:text-sm font-medium leading-tight">Saldo Caja</CardTitle>
+            <CreditCard className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground shrink-0" />
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-4 pb-4">
             {isStatsLoading ? (
               <Skeleton className="h-7 w-24" />
             ) : (
-              <div className="text-2xl font-bold">
+              <div className="text-lg sm:text-2xl font-bold tabular-nums">
                 S/ {stats?.balance.toLocaleString('es-PE', { minimumFractionDigits: 2 })}
               </div>
             )}
-            <p className="text-xs text-muted-foreground mt-1">Líqüidez directa actual</p>
+            <p className="text-xs text-muted-foreground mt-1 hidden sm:block">Liquidez directa actual</p>
           </CardContent>
         </Card>
 
-        {/* Card 4: Alumnos con Deuda */}
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Alumnos con Deuda</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-4 pt-4">
+            <CardTitle className="text-xs sm:text-sm font-medium leading-tight">Con Deuda</CardTitle>
+            <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground shrink-0" />
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-4 pb-4">
             {isStatsLoading ? (
               <Skeleton className="h-7 w-12" />
             ) : (
-              <div className="text-2xl font-bold">
+              <div className="text-lg sm:text-2xl font-bold">
                 {stats?.pendingStudentsCount}
               </div>
             )}
-            <p className="text-xs text-muted-foreground mt-1">Con al menos un mes activo sin completar</p>
+            <p className="text-xs text-muted-foreground mt-1 hidden sm:block">Con al menos un mes activo sin completar</p>
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-        <Card className="col-span-4">
-          <CardHeader>
+      {/* Bottom section: stacked on mobile, side-by-side on large */}
+      <div className="grid gap-4 grid-cols-1 lg:grid-cols-7">
+        <Card className="lg:col-span-4">
+          <CardHeader className="px-4 sm:px-6">
             <CardTitle>Pagos Recientes</CardTitle>
             <CardDescription>
               Transacciones confirmadas durante esta semana.
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-2 sm:px-6">
             {isPaymentsLoading ? (
-              <div className="space-y-4">
+              <div className="space-y-4 px-2">
                 <Skeleton className="h-10 w-full" />
                 <Skeleton className="h-12 w-full" />
                 <Skeleton className="h-12 w-full" />
@@ -134,9 +132,8 @@ export function DashboardPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Fecha</TableHead>
                     <TableHead>Alumno</TableHead>
-                    <TableHead>Cuota</TableHead>
+                    <TableHead className="hidden md:table-cell">Cuota</TableHead>
                     <TableHead>Estado</TableHead>
                     <TableHead className="text-right">Monto</TableHead>
                   </TableRow>
@@ -144,34 +141,27 @@ export function DashboardPage() {
                 <TableBody>
                   {payments?.slice(0, 5).map((pago) => (
                     <TableRow key={pago.id}>
-                      <TableCell className="font-medium text-muted-foreground">
-                        {new Date(pago.created_at || '').toLocaleDateString('es-PE', {
-                          day: '2-digit',
-                          month: 'short',
-                          year: 'numeric'
-                        })}
-                      </TableCell>
                       <TableCell>
-                        <div className="font-medium">{pago.perfil?.nombre_completo}</div>
+                        <div className="font-medium text-sm leading-tight">{pago.perfil?.nombre_completo}</div>
                         <div className="text-xs text-muted-foreground">{pago.perfil?.codigo_u}</div>
                       </TableCell>
-                      <TableCell>{pago.config_cuotas?.mes_nombre}</TableCell>
+                      <TableCell className="hidden md:table-cell">{pago.config_cuotas?.mes_nombre}</TableCell>
                       <TableCell>
                         <Badge
                           variant={pago.estado === 'Pagado' ? 'default' : pago.estado === 'Pendiente' ? 'secondary' : 'destructive'}
-                          className={pago.estado === 'Pagado' ? "bg-primary text-primary-foreground hover:bg-primary/80" : ""}
+                          className={`text-xs ${pago.estado === 'Pagado' ? "bg-primary text-primary-foreground hover:bg-primary/80" : ""}`}
                         >
                           {pago.estado}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-right font-medium">
+                      <TableCell className="text-right font-medium tabular-nums text-sm">
                         S/ {pago.monto_pagado.toLocaleString('es-PE', { minimumFractionDigits: 2 })}
                       </TableCell>
                     </TableRow>
                   ))}
                   {(!payments || payments.length === 0) && (
                     <TableRow>
-                      <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                      <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
                         No se ha registrado ninguna operación financiera aún.
                       </TableCell>
                     </TableRow>
@@ -182,7 +172,7 @@ export function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="col-span-3">
+        <Card className="lg:col-span-3">
           <CardHeader>
             <CardTitle>Progreso de la Promesa</CardTitle>
             <CardDescription>

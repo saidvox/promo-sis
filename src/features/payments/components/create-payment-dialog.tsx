@@ -69,6 +69,12 @@ export function CreatePaymentDialog({
     }
 
     const incremento = Number(montoAbonar)
+    
+    if (incremento > deudaRestante) {
+      toast.error(`El abono no puede ser mayor a la deuda restante (S/ ${deudaRestante.toFixed(2)})`)
+      return
+    }
+
     const nuevoTotal = totalPagado + incremento
     // Estado eval: si el nuevo total llega a la cuota, es 'Pagado', sino 'Pendiente'
     const nuevoEstado = nuevoTotal >= meta ? 'Pagado' : 'Pendiente'
@@ -163,7 +169,10 @@ export function CreatePaymentDialog({
                       type="number"
                       step="0.01"
                       min="0.1"
-                      className="text-lg font-bold"
+                      className={cn(
+                        "text-lg font-bold",
+                        Number(montoAbonar) > deudaRestante && "border-rose-500 ring-rose-500/20 text-rose-500"
+                      )}
                       placeholder="0.00"
                       value={montoAbonar}
                       onChange={(e) => setMontoAbonar(e.target.value ? Number(e.target.value) : '')}
@@ -178,6 +187,9 @@ export function CreatePaymentDialog({
                       Restante
                     </Button>
                   </div>
+                  {Number(montoAbonar) > deudaRestante && (
+                    <p className="text-[10px] text-rose-500 font-medium">No puedes abonar más de la deuda restante.</p>
+                  )}
                 </div>
               </>
             ) : (
@@ -202,7 +214,7 @@ export function CreatePaymentDialog({
             <Button 
               type="submit" 
               form="abono-form" 
-              disabled={isSubmitting || !montoAbonar || Number(montoAbonar) <= 0}
+              disabled={isSubmitting || !montoAbonar || Number(montoAbonar) <= 0 || Number(montoAbonar) > deudaRestante}
             >
               {isSubmitting ? (
                 <>

@@ -19,7 +19,10 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 
-export function CreateExpenseDialog() {
+import { DatePicker } from '@/components/ui/date-picker'
+import { cn } from '@/lib/utils'
+
+export function CreateExpenseDialog({ className }: { className?: string }) {
   const [open, setOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const { mutate } = useSWRConfig()
@@ -80,7 +83,7 @@ export function CreateExpenseDialog() {
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger
         render={
-          <Button className="gap-2">
+          <Button className={cn("gap-2", className)}>
             <PlusIcon className="h-4 w-4" />
             Nuevo Egreso
           </Button>
@@ -154,12 +157,11 @@ export function CreateExpenseDialog() {
 
             <div className="grid gap-2">
               <Label htmlFor="fecha">Fecha Programada de Pago</Label>
-              <Input
-                id="fecha"
-                type="date"
-                value={fechaProgramada}
-                onChange={(e) => setFechaProgramada(e.target.value)}
+              <DatePicker
+                date={fechaProgramada}
+                onChange={setFechaProgramada}
                 disabled={isSubmitting}
+                placeholder="Selecciona la fecha de pago"
               />
             </div>
           </div>

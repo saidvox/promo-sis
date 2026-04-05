@@ -36,7 +36,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 
-export function CreateInscripcionDialog() {
+export function CreateInscripcionDialog({ className }: { className?: string }) {
   const [open, setOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const { mutate } = useSWRConfig()
@@ -113,7 +113,7 @@ export function CreateInscripcionDialog() {
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger
         render={
-          <Button variant="default" className="gap-2 bg-indigo-600 hover:bg-indigo-700 text-white shadow-md">
+          <Button variant="default" className={cn("gap-2 bg-indigo-600 hover:bg-indigo-700 text-white shadow-md", className)}>
             <PlusIcon className="h-4 w-4" />
             <span>Registrar Inscripción</span>
           </Button>

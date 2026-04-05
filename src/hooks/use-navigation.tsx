@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, type ReactNode } from "react"
 
-export type PageView = "dashboard" | "students" | "payments" | "expenses" | "settings"
+export type PageView = "dashboard" | "students" | "payments" | "expenses" | "activities" | "settings"
 
 interface NavigationContextType {
   currentPage: PageView

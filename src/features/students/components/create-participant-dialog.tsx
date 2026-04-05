@@ -4,6 +4,7 @@ import { useSWRConfig } from 'swr'
 import { supabase } from '@/lib/supabase/client'
 import type { Role } from '@/types/role'
 import { getRoleColor } from '@/features/students/utils/get-role-color'
+import { cn } from '@/lib/utils'
 
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -27,7 +28,7 @@ import {
 } from '@/components/ui/select'
 import { toast } from 'sonner'
 
-export function CreateParticipantDialog() {
+export function CreateParticipantDialog({ className }: { className?: string }) {
   const [open, setOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const { mutate } = useSWRConfig()
@@ -67,6 +68,11 @@ export function CreateParticipantDialog() {
       return
     }
 
+    if (!/^U\d{8}$/.test(codigoU)) {
+      toast.error('El código debe tener el formato U + 8 números (Ej: U22205106)')
+      return
+    }
+
     setIsSubmitting(true)
 
     try {
@@ -99,7 +105,7 @@ export function CreateParticipantDialog() {
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger className={buttonVariants({ size: 'sm', className: 'gap-2' })}>
+      <DialogTrigger className={cn(buttonVariants({ size: 'sm' }), "gap-2", className)}>
         <PlusIcon className="h-4 w-4" />
         <span>Nuevo Participante</span>
       </DialogTrigger>
@@ -133,8 +139,20 @@ export function CreateParticipantDialog() {
               <Input
                 id="codigoU"
                 placeholder="U12345678"
+                maxLength={9}
                 value={codigoU}
-                onChange={(e) => setCodigoU(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value.toUpperCase();
+                  if (val === '') {
+                    setCodigoU('');
+                    return;
+                  }
+                  // Si no empieza con U, se la ponemos. Luego solo permitimos números después
+                  const formatted = val.startsWith('U') ? val : 'U' + val;
+                  const uPart = formatted.slice(0, 1);
+                  const digitsPart = formatted.slice(1).replace(/\D/g, '').slice(0, 8);
+                  setCodigoU(uPart + digitsPart);
+                }}
                 disabled={isSubmitting}
                 className="col-span-3"
               />

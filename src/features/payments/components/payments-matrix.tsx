@@ -154,38 +154,40 @@ export function PaymentsMatrix() {
   return (
     <div className="relative space-y-4">
       {/* TOOLBAR */}
-      <div className="flex flex-col gap-4 bg-card p-4 rounded-xl border shadow-sm">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div className="relative w-full sm:w-80">
-            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input 
-              placeholder="Buscar por nombre, código o DNI..." 
-              className="pl-9 bg-background"
+      <div className="flex flex-col gap-3 bg-card p-3 sm:p-4 rounded-xl border shadow-sm">
+        {/* Search bar: full width always */}
+        <div className="relative w-full">
+          <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input 
+            placeholder="Buscar por nombre, código o DNI..." 
+            className="pl-9 bg-background"
             value={searchQuery}
             onChange={(e) => {
               setSearchQuery(e.target.value)
-              setCurrentPage(1) // Reset a página 1 al tipear
+              setCurrentPage(1)
             }}
-            />
-          </div>
+          />
+        </div>
 
-          <div className="flex items-center gap-2">
-            <Tabs 
-              value={statusFilter} 
-              onValueChange={(val) => {
-                setStatusFilter(val as FilterStatus)
-                setCurrentPage(1)
-              }} 
-              className="w-full sm:w-auto"
-            >
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="all">Todos</TabsTrigger>
-                <TabsTrigger value="morosos" className="data-[state=active]:text-rose-600 dark:data-[state=active]:text-rose-400">Morosos</TabsTrigger>
-                <TabsTrigger value="aldia" className="data-[state=active]:text-emerald-600 dark:data-[state=active]:text-emerald-400">Al Día</TabsTrigger>
-              </TabsList>
-            </Tabs>
+        {/* Filters row: tabs full-width on mobile, inline on desktop */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+          <Tabs 
+            value={statusFilter} 
+            onValueChange={(val) => {
+              setStatusFilter(val as FilterStatus)
+              setCurrentPage(1)
+            }} 
+            className="w-full sm:flex-1"
+          >
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="all" className="text-xs sm:text-sm">Todos</TabsTrigger>
+              <TabsTrigger value="morosos" className="text-xs sm:text-sm data-[state=active]:text-rose-600 dark:data-[state=active]:text-rose-400">Morosos</TabsTrigger>
+              <TabsTrigger value="aldia" className="text-xs sm:text-sm data-[state=active]:text-emerald-600 dark:data-[state=active]:text-emerald-400">Al Día</TabsTrigger>
+            </TabsList>
+          </Tabs>
 
-            <CreateInscripcionDialog />
+          <div className="w-full sm:w-auto">
+            <CreateInscripcionDialog className="w-full sm:w-auto" />
           </div>
         </div>
       </div>
@@ -350,6 +352,11 @@ export function PaymentsMatrix() {
             </TableFooter>
           </Table>
         </div>
+
+        {/* Mobile scroll hint */}
+        <p className="sm:hidden text-center text-[10px] text-muted-foreground/60 py-1 italic">
+          ↔ Desliza horizontalmente para ver todos los meses
+        </p>
 
         {/* FOOTER PAGINATION */}
         <div className="flex items-center justify-between px-4 py-3 border-t bg-muted/20">

@@ -69,6 +69,11 @@ export function EditParticipantDialog({ participant }: EditParticipantDialogProp
       return
     }
 
+    if (!/^U\d{8}$/.test(codigoU)) {
+      toast.error('El código debe tener el formato U + 8 números (Ej: U22205106)')
+      return
+    }
+
     setIsSubmitting(true)
 
     try {
@@ -132,8 +137,20 @@ export function EditParticipantDialog({ participant }: EditParticipantDialogProp
               <Label htmlFor={`edit-codigoU-${participant.id}`}>Código Universitario</Label>
               <Input
                 id={`edit-codigoU-${participant.id}`}
+                maxLength={9}
                 value={codigoU}
-                onChange={(e) => setCodigoU(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value.toUpperCase();
+                  if (val === '') {
+                    setCodigoU('');
+                    return;
+                  }
+                  // Si no empieza con U, se la ponemos. Luego solo permitimos números después
+                  const formatted = val.startsWith('U') ? val : 'U' + val;
+                  const uPart = formatted.slice(0, 1);
+                  const digitsPart = formatted.slice(1).replace(/\D/g, '').slice(0, 8);
+                  setCodigoU(uPart + digitsPart);
+                }}
                 disabled={isSubmitting}
                 className="col-span-3"
               />
