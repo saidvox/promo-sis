@@ -211,7 +211,7 @@ export type Database = {
           avatar_url: string | null
           codigo_u: string
           created_at: string | null
-          dni: string
+          dni: string | null
           id: string
           nombre_completo: string
           rol: Database["public"]["Enums"]["user_role"] | null
@@ -222,8 +222,8 @@ export type Database = {
           avatar_url?: string | null
           codigo_u: string
           created_at?: string | null
-          dni: string
-          id: string
+          dni?: string | null
+          id?: string
           nombre_completo: string
           rol?: Database["public"]["Enums"]["user_role"] | null
           telefono?: string | null
@@ -233,7 +233,7 @@ export type Database = {
           avatar_url?: string | null
           codigo_u?: string
           created_at?: string | null
-          dni?: string
+          dni?: string | null
           id?: string
           nombre_completo?: string
           rol?: Database["public"]["Enums"]["user_role"] | null

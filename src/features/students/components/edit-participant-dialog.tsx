@@ -44,27 +44,31 @@ export function EditParticipantDialog({ participant }: EditParticipantDialogProp
   const [rol, setRol] = useState<Role>((participant.rol as Role) || 'Alumno')
   const [telefono, setTelefono] = useState(participant.telefono || '')
 
+  // Reset form when dialog opens or participant changes
+  const resetForm = () => {
+    setDni(participant.dni || '')
+    setCodigoU(participant.codigo_u || '')
+    setNombre(participant.nombre_completo || '')
+    setRol((participant.rol as Role) || 'Alumno')
+    setTelefono(participant.telefono || '')
+  }
+
   const handleOpenChange = (newOpen: boolean) => {
-    setOpen(newOpen)
-    if (!newOpen) {
-      // Option to reset form to original if cancelled
-      setDni(participant.dni || '')
-      setCodigoU(participant.codigo_u || '')
-      setNombre(participant.nombre_completo || '')
-      setRol((participant.rol as Role) || 'Alumno')
-      setTelefono(participant.telefono || '')
+    if (newOpen) {
+      resetForm()
     }
+    setOpen(newOpen)
   }
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!dni || !codigoU || !nombre || !rol) {
-      toast.error('Todos los campos son obligatorios')
+    if (!codigoU || !nombre || !rol) {
+      toast.error('Nombre, Código y Rol son obligatorios')
       return
     }
 
-    if (dni.length !== 8) {
+    if (dni && dni.length !== 8) {
       toast.error('El DNI debe tener exactamente 8 dígitos')
       return
     }
@@ -80,7 +84,7 @@ export function EditParticipantDialog({ participant }: EditParticipantDialogProp
       const { error } = await supabase
         .from('perfiles')
         .update({
-          dni,
+          dni: dni || null,
           codigo_u: codigoU,
           nombre_completo: nombre,
           rol,
@@ -92,10 +96,10 @@ export function EditParticipantDialog({ participant }: EditParticipantDialogProp
 
       toast.success('Información actualizada correctamente')
       
-      // SWR Vercel dedup best practice
+      // SWR revalidation
       await mutate('api/students')
       
-      handleOpenChange(false)
+      setOpen(false)
     } catch (error: any) {
       console.error('Error actualizando perfil:', error)
       toast.error('No se pudieron guardar los cambios.')
@@ -160,6 +164,7 @@ export function EditParticipantDialog({ participant }: EditParticipantDialogProp
               <Label htmlFor={`edit-nombre-${participant.id}`}>Nombre Completo</Label>
               <Input
                 id={`edit-nombre-${participant.id}`}
+                maxLength={80}
                 value={nombre}
                 onChange={(e) => setNombre(e.target.value)}
                 disabled={isSubmitting}

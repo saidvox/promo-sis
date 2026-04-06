@@ -139,6 +139,7 @@ export function CreateInscripcionDialog({ className }: { className?: string }) {
                     <Button
                       variant="outline"
                       role="combobox"
+                      id="perfil"
                       aria-expanded={openCombobox}
                       className="w-full justify-between font-normal"
                       disabled={isLoading || isSubmitting}
@@ -226,7 +227,7 @@ export function CreateInscripcionDialog({ className }: { className?: string }) {
                 onValueChange={(val) => val && setMetodoPago(val)}
                 disabled={isSubmitting}
               >
-                <SelectTrigger>
+                <SelectTrigger id="metodo_pago">
                   <SelectValue placeholder="Selecciona el método" />
                 </SelectTrigger>
                 <SelectContent>

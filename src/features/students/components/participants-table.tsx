@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, lazy, Suspense } from 'react'
 import {
   Table,
   TableBody,
@@ -12,18 +12,30 @@ import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import { Trash2Icon, PhoneIcon } from 'lucide-react'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { toast } from 'sonner'
 import { useSWRConfig } from 'swr'
 import { supabase } from '@/lib/supabase/client'
 import { useStudents, type Perfil } from '@/features/students/api/use-students'
 import { getRoleColor } from '@/features/students/utils/get-role-color'
-import { CreateParticipantDialog } from './create-participant-dialog'
-import { EditParticipantDialog } from './edit-participant-dialog'
+const CreateParticipantDialog = lazy(() => import('./create-participant-dialog').then(m => ({ default: m.CreateParticipantDialog })))
+const EditParticipantDialog = lazy(() => import('./edit-participant-dialog').then(m => ({ default: m.EditParticipantDialog })))
 
 export function ParticipantsTable() {
   const { data, isLoading, error } = useStudents()
   const { mutate } = useSWRConfig()
   const [activeTab, setActiveTab] = useState<string>('todos')
+  const [participantToDelete, setParticipantToDelete] = useState<Perfil | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   if (error) {
     return (
@@ -43,23 +55,26 @@ export function ParticipantsTable() {
   
   const filteredData = getFilteredData()
 
-  const handleDelete = async (participant: Perfil) => {
-    const isConfirmed = window.confirm(`¿Estás seguro que deseas eliminar a ${participant.nombre_completo}?`)
-    if (!isConfirmed) return
-
+  const handleDelete = async () => {
+    if (!participantToDelete) return
+    
+    setIsDeleting(true)
     try {
       const { error } = await supabase
         .from('perfiles')
         .delete()
-        .eq('id', participant.id)
+        .eq('id', participantToDelete.id)
 
       if (error) throw error
       
       toast.success('Participante eliminado correctamente')
       mutate('api/students')
+      setParticipantToDelete(null)
     } catch (err: any) {
       console.error('Error eliminando participante:', err)
-      toast.error('Ocurrió un error al intentar eliminar.')
+      toast.error(err.message || 'Error al eliminar')
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -135,15 +150,16 @@ export function ParticipantsTable() {
 
               {/* Actions */}
               <div className="flex items-center gap-1 pt-1 border-t border-border/40">
-                <EditParticipantDialog participant={participant} />
+                <Suspense>
+                  <EditParticipantDialog participant={participant} />
+                </Suspense>
                 <Button
                   variant="ghost"
                   size="icon"
                   className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive"
-                  aria-label="Eliminar participante"
-                  onClick={() => handleDelete(participant)}
+                  onClick={() => setParticipantToDelete(participant)}
                 >
-                  <Trash2Icon className="h-4 w-4" />
+                  <Trash2Icon className="h-3.5 w-3.5" />
                 </Button>
               </div>
             </div>
@@ -207,15 +223,16 @@ export function ParticipantsTable() {
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right flex items-center justify-end gap-1">
-                    <EditParticipantDialog participant={participant} />
+                    <Suspense>
+                      <EditParticipantDialog participant={participant} />
+                    </Suspense>
                     <Button 
                       variant="ghost" 
                       size="icon" 
-                      className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive" 
-                      aria-label="Eliminar participante"
-                      onClick={() => handleDelete(participant)}
+                      className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive"
+                      onClick={() => setParticipantToDelete(participant)}
                     >
-                      <Trash2Icon className="h-4 w-4" />
+                      <Trash2Icon className="h-3.5 w-3.5" />
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -250,6 +267,30 @@ export function ParticipantsTable() {
           </div>
         </div>
       )}
+
+      <AlertDialog open={participantToDelete !== null} onOpenChange={(open) => !open && setParticipantToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Estás completamente seguro?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción eliminará permanentemente a <strong>{participantToDelete?.nombre_completo}</strong> del sistema. No podrás deshacer esta operación.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={(e) => {
+                e.preventDefault()
+                handleDelete()
+              }}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? 'Eliminando...' : 'Sí, eliminar'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

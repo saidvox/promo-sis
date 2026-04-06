@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo, lazy, Suspense } from 'react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { WalletIcon, BuildingIcon, PackageIcon, ClockIcon, Trash2Icon, PencilIcon, BanknoteIcon } from 'lucide-react'
@@ -7,9 +7,9 @@ import { supabase } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { useExpenses, type EgresoRow, type EgresoWithAbonos } from '../api/use-expenses'
-import { CreateExpenseDialog } from './create-expense-dialog'
-import { PayExpenseDialog } from './pay-expense-dialog'
-import { EditExpenseDialog } from './edit-expense-dialog'
+const CreateExpenseDialog = lazy(() => import('./create-expense-dialog').then(m => ({ default: m.CreateExpenseDialog })))
+const PayExpenseDialog = lazy(() => import('./pay-expense-dialog').then(m => ({ default: m.PayExpenseDialog })))
+const EditExpenseDialog = lazy(() => import('./edit-expense-dialog').then(m => ({ default: m.EditExpenseDialog })))
 
 import {
   Card,
@@ -36,6 +36,16 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover'
 import { HistoryIcon } from 'lucide-react'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 
 type CategoriaTab = 'all' | 'Productora' | 'Otros'
 
@@ -46,25 +56,27 @@ export function ExpensesTable() {
   const [activeTab, setActiveTab] = useState<CategoriaTab>('all')
   const [payingEgreso, setPayingEgreso] = useState<EgresoWithAbonos | null>(null)
   const [editingEgreso, setEditingEgreso] = useState<EgresoRow | null>(null)
+  const [egresoToDelete, setEgresoToDelete] = useState<EgresoRow | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
 
-  const handleDelete = useCallback(async (egreso: EgresoRow) => {
-    if (egreso.estado === 'Pagado') {
-      toast.error('No puedes eliminar un egreso ya pagado.')
-      return
-    }
-    const confirmed = window.confirm(`¿Eliminar el egreso "${egreso.concepto}"?`)
-    if (!confirmed) return
-
+  const handleDelete = useCallback(async () => {
+    if (!egresoToDelete) return
+    
+    setIsDeleting(true)
     try {
-      const { error } = await supabase.from('egresos').delete().eq('id', egreso.id)
+      const { error } = await supabase.from('egresos').delete().eq('id', egresoToDelete.id)
       if (error) throw error
+      
       toast.success('Egreso eliminado')
       mutate('api/expenses')
       mutate('api/dashboard-stats')
+      setEgresoToDelete(null)
     } catch (err: any) {
       toast.error(err.message || 'Error al eliminar')
+    } finally {
+      setIsDeleting(false)
     }
-  }, [mutate])
+  }, [egresoToDelete, mutate])
 
   const filteredEgresos = useMemo(() => {
     if (!data) return []
@@ -255,7 +267,13 @@ export function ExpensesTable() {
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive"
-                      onClick={() => handleDelete(egreso)}
+                      onClick={() => {
+                        if (egreso.estado === 'Pagado') {
+                          toast.error('No puedes eliminar un egreso ya pagado.')
+                          return
+                        }
+                        setEgresoToDelete(egreso)
+                      }}
                     >
                       <Trash2Icon className="h-3.5 w-3.5" />
                     </Button>
@@ -334,11 +352,13 @@ export function ExpensesTable() {
                         <div className="flex items-center gap-2">
                           {totalAbonado > 0 && (
                             <Popover>
-                              <PopoverTrigger>
-                                <Button variant="ghost" size="icon" className="h-4 w-4 text-muted-foreground hover:text-primary">
-                                  <HistoryIcon className="h-3 w-3" />
-                                </Button>
-                              </PopoverTrigger>
+                              <PopoverTrigger
+                                render={
+                                  <Button variant="ghost" size="icon" className="h-4 w-4 text-muted-foreground hover:text-primary">
+                                    <HistoryIcon className="h-3 w-3" />
+                                  </Button>
+                                }
+                              />
                               <PopoverContent className="w-60 p-3" align="end">
                                 <h4 className="text-xs font-semibold mb-2 flex items-center gap-1.5 text-foreground">
                                   <HistoryIcon className="h-3.5 w-3.5" />
@@ -419,7 +439,13 @@ export function ExpensesTable() {
                               variant="ghost"
                               size="icon"
                               className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive"
-                              onClick={() => handleDelete(egreso)}
+                              onClick={() => {
+                                if (egreso.estado === 'Pagado') {
+                                  toast.error('No puedes eliminar un egreso ya pagado.')
+                                  return
+                                }
+                                setEgresoToDelete(egreso)
+                              }}
                             >
                               <Trash2Icon className="h-3.5 w-3.5" />
                             </Button>
@@ -440,19 +466,44 @@ export function ExpensesTable() {
         </Table>
       </div>
 
-      {/* Diálogos */}
-      <PayExpenseDialog
-        open={payingEgreso !== null}
-        onOpenChange={(isOpen) => { if (!isOpen) setPayingEgreso(null) }}
-        egreso={payingEgreso}
-        saldoDisponible={stats?.saldoDisponible ?? 0}
-      />
+      <Suspense>
+        <PayExpenseDialog
+          open={payingEgreso !== null}
+          onOpenChange={(isOpen) => { if (!isOpen) setPayingEgreso(null) }}
+          egreso={payingEgreso}
+          saldoDisponible={stats?.saldoDisponible ?? 0}
+        />
 
-      <EditExpenseDialog
-        open={editingEgreso !== null}
-        onOpenChange={(isOpen) => { if (!isOpen) setEditingEgreso(null) }}
-        egreso={editingEgreso}
-      />
+        <EditExpenseDialog
+          open={editingEgreso !== null}
+          onOpenChange={(isOpen) => { if (!isOpen) setEditingEgreso(null) }}
+          egreso={editingEgreso}
+        />
+      </Suspense>
+
+      <AlertDialog open={egresoToDelete !== null} onOpenChange={(open) => !open && setEgresoToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar este egreso?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción no se puede deshacer. El egreso <strong>{egresoToDelete?.concepto}</strong> será borrado permanentemente de los registros.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={(e) => {
+                e.preventDefault()
+                handleDelete()
+              }}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? 'Eliminando...' : 'Sí, eliminar'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

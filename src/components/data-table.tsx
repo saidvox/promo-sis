@@ -681,7 +681,11 @@ function TableCellViewer({ item }: { item: z.infer<typeof schema> }) {
   const isMobile = useIsMobile()
   return (
     <Drawer direction={isMobile ? "bottom" : "right"}>
-      <DrawerTrigger render={<Button variant="link" className="w-fit px-0 text-left text-foreground" />}>{item.header}</DrawerTrigger>
+      <DrawerTrigger asChild>
+        <Button variant="link" className="w-fit px-0 text-left text-foreground">
+          {item.header}
+        </Button>
+      </DrawerTrigger>
       <DrawerContent>
         <DrawerHeader className="gap-1">
           <DrawerTitle>{item.header}</DrawerTitle>
@@ -749,12 +753,12 @@ function TableCellViewer({ item }: { item: z.infer<typeof schema> }) {
           )}
           <form className="flex flex-col gap-4">
             <div className="flex flex-col gap-3">
-              <Label htmlFor="header">Header</Label>
-              <Input id="header" defaultValue={item.header} />
+              <Label htmlFor={`header-${item.id}`}>Header</Label>
+              <Input id={`header-${item.id}`} defaultValue={item.header} />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-3">
-                <Label htmlFor="type">Type</Label>
+                <Label htmlFor={`type-${item.id}`}>Type</Label>
                 <Select
                   defaultValue={item.type}
                   items={[
@@ -771,7 +775,7 @@ function TableCellViewer({ item }: { item: z.infer<typeof schema> }) {
                     { label: "Cover Page", value: "Cover Page" },
                   ]}
                 >
-                  <SelectTrigger id="type" className="w-full">
+                  <SelectTrigger id={`type-${item.id}`} className="w-full">
                     <SelectValue placeholder="Select a type" />
                   </SelectTrigger>
                   <SelectContent>
@@ -797,7 +801,7 @@ function TableCellViewer({ item }: { item: z.infer<typeof schema> }) {
                 </Select>
               </div>
               <div className="flex flex-col gap-3">
-                <Label htmlFor="status">Status</Label>
+                <Label htmlFor={`status-${item.id}`}>Status</Label>
                 <Select
                   defaultValue={item.status}
                   items={[
@@ -806,7 +810,7 @@ function TableCellViewer({ item }: { item: z.infer<typeof schema> }) {
                     { label: "Not Started", value: "Not Started" },
                   ]}
                 >
-                  <SelectTrigger id="status" className="w-full">
+                  <SelectTrigger id={`status-${item.id}`} className="w-full">
                     <SelectValue placeholder="Select a status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -821,16 +825,16 @@ function TableCellViewer({ item }: { item: z.infer<typeof schema> }) {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-3">
-                <Label htmlFor="target">Target</Label>
-                <Input id="target" defaultValue={item.target} />
+                <Label htmlFor={`target-${item.id}`}>Target</Label>
+                <Input id={`target-${item.id}`} defaultValue={item.target} />
               </div>
               <div className="flex flex-col gap-3">
-                <Label htmlFor="limit">Limit</Label>
-                <Input id="limit" defaultValue={item.limit} />
+                <Label htmlFor={`limit-${item.id}`}>Limit</Label>
+                <Input id={`limit-${item.id}`} defaultValue={item.limit} />
               </div>
             </div>
             <div className="flex flex-col gap-3">
-              <Label htmlFor="reviewer">Reviewer</Label>
+              <Label htmlFor={`reviewer-drawer-${item.id}`}>Reviewer</Label>
               <Select
                 defaultValue={item.reviewer}
                 items={[
@@ -839,7 +843,7 @@ function TableCellViewer({ item }: { item: z.infer<typeof schema> }) {
                   { label: "Emily Whalen", value: "Emily Whalen" },
                 ]}
               >
-                <SelectTrigger id="reviewer" className="w-full">
+                <SelectTrigger id={`reviewer-drawer-${item.id}`} className="w-full">
                   <SelectValue placeholder="Select a reviewer" />
                 </SelectTrigger>
                 <SelectContent>
@@ -857,7 +861,9 @@ function TableCellViewer({ item }: { item: z.infer<typeof schema> }) {
         </div>
         <DrawerFooter>
           <Button>Submit</Button>
-          <DrawerClose render={<Button variant="outline" />}></DrawerClose>
+          <DrawerClose asChild>
+            <Button variant="outline">Cerrar</Button>
+          </DrawerClose>
         </DrawerFooter>
       </DrawerContent>
     </Drawer>

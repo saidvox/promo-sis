@@ -17,7 +17,7 @@ import {
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import { DollarSign, Activity, CreditCard, Users } from 'lucide-react'
+import { TrendingUp, WalletMinimal, Users2, ArrowDownCircle } from 'lucide-react'
 
 // Constants
 const GOAL_AMOUNT = 100000 
@@ -43,71 +43,89 @@ export function DashboardPage() {
     <div className="flex-1 space-y-4 p-4 sm:p-6">
       {/* Stats Grid: 2 cols on mobile, 4 on large */}
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-        <Card>
+        {/* RECAUDADO (Income) */}
+        <Card className="relative overflow-hidden border-t-2 border-t-emerald-500 shadow-sm transition-all hover:shadow-md">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-4 pt-4">
-            <CardTitle className="text-xs sm:text-sm font-medium leading-tight">Recaudado</CardTitle>
-            <DollarSign className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground shrink-0" />
+            <CardTitle className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-muted-foreground">Recaudado</CardTitle>
+            <div className="p-1.5 bg-emerald-500/10 rounded-lg shrink-0">
+              <TrendingUp className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-emerald-600" />
+            </div>
           </CardHeader>
           <CardContent className="px-4 pb-4">
             {isStatsLoading ? (
               <Skeleton className="h-7 w-24" />
             ) : (
-              <div className="text-lg sm:text-2xl font-bold tabular-nums">
-                S/ {stats?.totalIncome.toLocaleString('es-PE', { minimumFractionDigits: 2 })}
+              <div className="text-xl sm:text-3xl font-bold tabular-nums text-emerald-700">
+                <span className="text-xs sm:text-lg font-medium mr-1 text-emerald-600/70">S/</span>
+                {stats?.totalIncome.toLocaleString('es-PE', { minimumFractionDigits: 2 })}
               </div>
             )}
-            <p className="text-xs text-muted-foreground mt-1 hidden sm:block">Ingresos históricos confirmados</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground mt-1.5 font-medium">Ingresos históricos</p>
           </CardContent>
         </Card>
 
-        <Card>
+        {/* EGRESOS (Expenses) */}
+        <Card className="relative overflow-hidden border-t-2 border-t-rose-500 shadow-sm transition-all hover:shadow-md">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-4 pt-4">
-            <CardTitle className="text-xs sm:text-sm font-medium leading-tight">Egresos</CardTitle>
-            <Activity className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground shrink-0" />
+            <CardTitle className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-muted-foreground">Egresos</CardTitle>
+            <div className="p-1.5 bg-rose-500/10 rounded-lg shrink-0">
+              <ArrowDownCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-rose-600" />
+            </div>
           </CardHeader>
           <CardContent className="px-4 pb-4">
             {isStatsLoading ? (
               <Skeleton className="h-7 w-24" />
             ) : (
-              <div className="text-lg sm:text-2xl font-bold tabular-nums">
-                S/ {stats?.totalExpenses.toLocaleString('es-PE', { minimumFractionDigits: 2 })}
+              <div className="text-xl sm:text-3xl font-bold tabular-nums text-rose-700">
+                <span className="text-xs sm:text-lg font-medium mr-1 text-rose-600/70">S/</span>
+                {stats?.totalExpenses.toLocaleString('es-PE', { minimumFractionDigits: 2 })}
               </div>
             )}
-            <p className="text-xs text-muted-foreground mt-1 hidden sm:block">Gastos registrados totales</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground mt-1.5 font-medium">Gastos totales</p>
           </CardContent>
         </Card>
 
-        <Card>
+        {/* SALDO CAJA (Balance) */}
+        <Card className="relative overflow-hidden border-t-2 border-t-indigo-500 shadow-sm transition-all hover:shadow-md">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-4 pt-4">
-            <CardTitle className="text-xs sm:text-sm font-medium leading-tight">Saldo Caja</CardTitle>
-            <CreditCard className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground shrink-0" />
+            <CardTitle className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-muted-foreground">Saldo Caja</CardTitle>
+            <div className="p-1.5 bg-indigo-500/10 rounded-lg shrink-0">
+              <WalletMinimal className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-indigo-600" />
+            </div>
           </CardHeader>
           <CardContent className="px-4 pb-4">
             {isStatsLoading ? (
               <Skeleton className="h-7 w-24" />
             ) : (
-              <div className="text-lg sm:text-2xl font-bold tabular-nums">
-                S/ {stats?.balance.toLocaleString('es-PE', { minimumFractionDigits: 2 })}
+              <div className="text-xl sm:text-3xl font-bold tabular-nums text-indigo-700">
+                <span className="text-xs sm:text-lg font-medium mr-1 text-indigo-600/70">S/</span>
+                {stats?.balance.toLocaleString('es-PE', { minimumFractionDigits: 2 })}
               </div>
             )}
-            <p className="text-xs text-muted-foreground mt-1 hidden sm:block">Liquidez directa actual</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground mt-1.5 font-medium">Liquidez actual</p>
           </CardContent>
         </Card>
 
-        <Card>
+        {/* ESTUDIANTES CON DEUDA (Debt) */}
+        <Card className="relative overflow-hidden border-t-2 border-t-amber-500 shadow-sm transition-all hover:shadow-md">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-4 pt-4">
-            <CardTitle className="text-xs sm:text-sm font-medium leading-tight">Con Deuda</CardTitle>
-            <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground shrink-0" />
+            <CardTitle className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-muted-foreground">Con Deuda</CardTitle>
+            <div className="p-1.5 bg-amber-500/10 rounded-lg shrink-0">
+              <Users2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-amber-600" />
+            </div>
           </CardHeader>
           <CardContent className="px-4 pb-4">
             {isStatsLoading ? (
               <Skeleton className="h-7 w-12" />
             ) : (
-              <div className="text-lg sm:text-2xl font-bold">
-                {stats?.pendingStudentsCount}
+              <div className="flex items-baseline gap-1.5">
+                <div className="text-xl sm:text-3xl font-bold text-amber-700">
+                  {stats?.pendingStudentsCount}
+                </div>
+                <span className="text-xs sm:text-sm font-medium text-amber-600/70">alumnos</span>
               </div>
             )}
-            <p className="text-xs text-muted-foreground mt-1 hidden sm:block">Con al menos un mes activo sin completar</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground mt-1.5 font-medium">Con pagos pendientes</p>
           </CardContent>
         </Card>
       </div>
@@ -179,22 +197,33 @@ export function DashboardPage() {
               Hemos recolectado el {progressPercentage.toFixed(1)}% de la meta.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-8">
-            <div className="flex flex-col space-y-2">
+          <CardContent className="space-y-6">
+            <div className="flex flex-col space-y-3">
                {isStatsLoading ? (
-                 <Skeleton className="h-4 w-full" />
+                 <div className="space-y-2">
+                   <Skeleton className="h-4 w-full" />
+                   <Skeleton className="h-8 w-full rounded-full" />
+                 </div>
                ) : (
                  <>
                   <div className="flex w-full items-center justify-between">
-                    <span className="text-sm font-medium">Fiesta de Gala S/ {GOAL_AMOUNT.toLocaleString('es-PE')}</span>
-                    <span className="text-sm font-medium text-muted-foreground">{progressPercentage.toFixed(1)}%</span>
+                    <div className="flex flex-col">
+                      <span className="text-sm font-semibold text-foreground/80 lowercase first-letter:uppercase">Fiesta de Gala</span>
+                      <span className="text-xs text-muted-foreground">Meta: S/ {GOAL_AMOUNT.toLocaleString('es-PE')}</span>
+                    </div>
+                    <Badge variant="outline" className="font-bold tabular-nums bg-primary/5 text-primary border-primary/20">
+                      {progressPercentage.toFixed(1)}%
+                    </Badge>
                   </div>
-                  <div className="relative h-2 w-full overflow-hidden rounded-full bg-secondary">
+                  <div className="relative h-3 w-full overflow-hidden rounded-full bg-secondary/50 p-[1px]">
                     <div
-                      className="h-full bg-primary transition-all duration-500 ease-in-out"
+                      className="h-full bg-gradient-to-r from-primary/80 to-primary transition-all duration-1000 ease-in-out rounded-full shadow-[0_0_10px_rgba(var(--primary),0.3)]"
                       style={{ width: `${progressPercentage}%` }}
                     />
                   </div>
+                  <p className="text-[10px] text-muted-foreground text-center italic">
+                    Faltan S/ {(GOAL_AMOUNT - (stats?.totalIncome || 0)).toLocaleString('es-PE')} para alcanzar la meta.
+                  </p>
                  </>
                )}
             </div>

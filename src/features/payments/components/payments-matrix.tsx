@@ -1,9 +1,9 @@
-import { useState, useCallback, useMemo, useEffect } from 'react'
+import { useState, useCallback, useMemo, useEffect, lazy, Suspense } from 'react'
 import { Loader2Icon, ShieldAlertIcon, SearchIcon, ChevronLeftIcon, ChevronRightIcon } from 'lucide-react'
 import { usePaymentsMatrix, MESES_DEL_ANO } from '../api/use-payments-matrix'
 import { PaymentMatrixCell } from './payment-matrix-cell'
-import { CreatePaymentDialog } from './create-payment-dialog'
-import { CreateInscripcionDialog } from './create-inscripcion-dialog'
+const CreatePaymentDialog = lazy(() => import('./create-payment-dialog').then(m => ({ default: m.CreatePaymentDialog })))
+const CreateInscripcionDialog = lazy(() => import('./create-inscripcion-dialog').then(m => ({ default: m.CreateInscripcionDialog })))
 import { getRoleColor } from '@/features/students/utils/get-role-color'
 import { cn } from '@/lib/utils'
 
@@ -397,13 +397,16 @@ export function PaymentsMatrix() {
           </div>
         </div>
 
-        <CreatePaymentDialog 
-          open={activeCell !== null}
-          onOpenChange={handleDialogOpenChange}
-          perfil={activeCell ? perfilesInscritos.find(p => p.id === activeCell.perfilId) || null : null}
-          cuota={activeCell ? Object.values(cuotasPorMes).find(c => c.id === activeCell.cuotaId) || null : null}
-          pagoExistente={activeCell ? pagosMap[`${activeCell.perfilId}-${activeCell.cuotaId}`] : undefined}
-        />
+        {/* DIALOGS */}
+        <Suspense>
+          <CreatePaymentDialog 
+            open={activeCell !== null}
+            onOpenChange={handleDialogOpenChange}
+            perfil={activeCell ? perfilesInscritos.find(p => p.id === activeCell.perfilId) || null : null}
+            cuota={activeCell ? Object.values(cuotasPorMes).find(c => c.id === activeCell.cuotaId) || null : null}
+            pagoExistente={activeCell ? pagosMap[`${activeCell.perfilId}-${activeCell.cuotaId}`] : undefined}
+          />
+        </Suspense>
       </div>
     </div>
   )

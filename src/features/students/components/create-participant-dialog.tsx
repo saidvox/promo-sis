@@ -58,12 +58,12 @@ export function CreateParticipantDialog({ className }: { className?: string }) {
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!dni || !codigoU || !nombre || !rol) {
-      toast.error('Todos los campos son obligatorios')
+    if (!codigoU || !nombre || !rol) {
+      toast.error('Nombre, Código y Rol son obligatorios')
       return
     }
 
-    if (dni.length !== 8) {
+    if (dni && dni.length !== 8) {
       toast.error('El DNI debe tener exactamente 8 dígitos')
       return
     }
@@ -79,8 +79,7 @@ export function CreateParticipantDialog({ className }: { className?: string }) {
       const { error } = await supabase
         .from('perfiles')
         .insert({
-          id: crypto.randomUUID(),
-          dni,
+          dni: dni || null,
           codigo_u: codigoU,
           nombre_completo: nombre,
           rol,
@@ -94,7 +93,7 @@ export function CreateParticipantDialog({ className }: { className?: string }) {
       // Vercel Best Practice: client-swr-dedup. Mutate the cache immediately to trigger a re-render
       await mutate('api/students')
       
-      handleOpenChange(false)
+      setOpen(false)
     } catch (error: any) {
       console.error('Error insertando perfil:', error)
       toast.error(`Error: ${error.message || 'Error al registrar participante. Verifica DNI/Código.'}`)
@@ -163,6 +162,7 @@ export function CreateParticipantDialog({ className }: { className?: string }) {
               <Input
                 id="nombre"
                 placeholder="Juan Pérez"
+                maxLength={80}
                 value={nombre}
                 onChange={(e) => setNombre(e.target.value)}
                 disabled={isSubmitting}
@@ -193,7 +193,7 @@ export function CreateParticipantDialog({ className }: { className?: string }) {
                 onValueChange={(value) => setRol(value as Role)}
                 disabled={isSubmitting}
               >
-                <SelectTrigger>
+                <SelectTrigger id="rol">
                   <SelectValue placeholder="Selecciona un rol">
                     {rol && (
                       <Badge variant="outline" className={getRoleColor(rol)}>

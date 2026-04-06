@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { PlusIcon, SaveIcon, XIcon, CalendarIcon, Loader2Icon } from 'lucide-react'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
-import { es } from 'date-fns/locale'
+import { es } from 'date-fns/locale/es'
 
 import { useQuotas, MESES_DEL_ANO } from '../api/use-quotas'
 import { cn } from '@/lib/utils'
@@ -26,6 +26,16 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { DatePicker } from '@/components/ui/date-picker'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 
 export function QuotasConfigView() {
   const { data, isLoading, error, saveQuota, deleteQuota } = useQuotas()
@@ -35,6 +45,8 @@ export function QuotasConfigView() {
   const [monto, setMonto] = useState<number>(150)
   const [fechaVencimiento, setFechaVencimiento] = useState<string>('')
   const [isSaving, setIsSaving] = useState(false)
+  const [deletingQuota, setDeletingQuota] = useState<{ mes: string, id: string } | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   const handleEdit = (mes: string) => {
     const config = data[mes]
@@ -66,14 +78,18 @@ export function QuotasConfigView() {
     }
   }
 
-  const handleDelete = async (mes: string, id: string) => {
-    if (!window.confirm(`¿Seguro que deseas desactivar la cuota de ${mes}? Esto podría fallar si ya tiene pagos asociados.`)) return
+  const handleDeactivate = async () => {
+    if (!deletingQuota) return
     
+    setIsDeleting(true)
     try {
-      await deleteQuota(id)
-      toast.success(`${mes} ha sido descativado.`)
+      await deleteQuota(deletingQuota.id)
+      toast.success(`${deletingQuota.mes} ha sido desactivado.`)
+      setDeletingQuota(null)
     } catch (err: any) {
       toast.error('No se puede desactivar. Probablemente ya existen pagos en este mes.')
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -96,14 +112,80 @@ export function QuotasConfigView() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-2">
-        <h2 className="text-lg font-semibold text-foreground tracking-tight">Calendario de Recaudación</h2>
-        <p className="text-sm text-muted-foreground">
-          Define qué meses son cobrables indicando su tarifa exacta y su fecha límite proyectada. Los meses que actives aparecerán en rojo en la Tabla de Pagos de forma inmediata para todos los participantes inscritos.
-        </p>
+      {/* MOBILE VIEW: Cards */}
+      <div className="grid gap-3 sm:hidden">
+        {MESES_DEL_ANO.map((mes) => {
+          const config = data[mes]
+          const isActive = !!config
+
+          return (
+            <div 
+              key={mes} 
+              className={cn(
+                "group relative overflow-hidden rounded-xl border bg-card p-4 transition-all hover:shadow-md",
+                !isActive && "opacity-70 grayscale-[0.5]"
+              )}
+            >
+              <div className="flex items-center justify-between gap-4">
+                <div className="space-y-1">
+                  <h3 className="font-semibold text-lg tracking-tight">{mes}</h3>
+                  <div className="flex items-center gap-2">
+                    {isActive ? (
+                      <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
+                        S/ {config.monto.toFixed(2)}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-muted-foreground italic">Inactivo</span>
+                    )}
+                    {isActive && config.fecha_vencimiento && (
+                      <span className="flex items-center gap-1 text-[10px] text-muted-foreground border-l pl-2 border-border/50">
+                        <CalendarIcon className="h-3 w-3" />
+                        {format(new Date(`${config.fecha_vencimiento}T00:00:00`), 'dd MMM', { locale: es })}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  {isActive ? (
+                    <>
+                      <Button 
+                        variant="secondary" 
+                        size="sm" 
+                        onClick={() => handleEdit(mes)}
+                        className="h-9 px-4 text-xs font-semibold shadow-sm"
+                      >
+                        Modificar
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-8 w-8 text-rose-500 hover:bg-rose-500/10"
+                        onClick={() => setDeletingQuota({ mes, id: config.id })}
+                      >
+                        <XIcon className="h-4 w-4" />
+                      </Button>
+                    </>
+                  ) : (
+                    <Button 
+                      variant="default" 
+                      size="sm" 
+                      className="h-9 px-6 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 shadow-sm"
+                      onClick={() => handleEdit(mes)}
+                    >
+                      <PlusIcon className="mr-1.5 h-3.5 w-3.5" /> Activar
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>
+          )
+        })}
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-border/40 bg-card shadow-sm">
+      {/* DESKTOP VIEW: Table */}
+      <div className="hidden sm:block overflow-hidden rounded-xl border border-border/40 bg-card shadow-sm">
+
         <Table>
           <TableHeader className="bg-secondary/40">
             <TableRow>
@@ -154,13 +236,13 @@ export function QuotasConfigView() {
                           Modificar
                         </Button>
                         <Button
-                          variant="destructive"
-                          size="icon-xs"
-                          className="h-6 w-6 opacity-40 hover:opacity-100"
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-rose-500 hover:bg-rose-500/10"
                           title="Desactivar mes"
-                          onClick={() => handleDelete(mes, config.id)}
+                          onClick={() => setDeletingQuota({ mes, id: config.id })}
                         >
-                          <XIcon className="h-3 w-3" />
+                          <XIcon className="h-4 w-4" />
                         </Button>
                       </div>
                     ) : (
@@ -213,6 +295,7 @@ export function QuotasConfigView() {
                   date={fechaVencimiento}
                   onChange={setFechaVencimiento}
                   disabled={isSaving}
+                  id="fecha"
                   placeholder="Sin fecha límite"
                   className="w-full text-sm font-medium"
                 />
@@ -229,6 +312,30 @@ export function QuotasConfigView() {
           </DialogContent>
         )}
       </Dialog>
+
+      <AlertDialog open={deletingQuota !== null} onOpenChange={(open) => !open && setDeletingQuota(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Desactivar cuota de {deletingQuota?.mes}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción desactivará el mes para cobros. <strong>Atención:</strong> Esta operación podría fallar si ya existen pagos registrados para este mes en la base de datos.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={(e) => {
+                e.preventDefault()
+                handleDeactivate()
+              }}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? 'Desactivando...' : 'Sí, desactivar'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

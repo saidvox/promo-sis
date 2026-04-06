@@ -16,11 +16,12 @@ export const useAuth = () => {
         .from('perfiles')
         .select('*')
         .eq('id', userId)
-        .single()
+        .maybeSingle()
       
       if (error) throw error
       setProfile(data)
     } catch (error) {
+      // Si hay un error real (no solo un 404), lo logeamos
       console.error('Error fetching profile:', error)
       setProfile(null)
     }

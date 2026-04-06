@@ -1,5 +1,5 @@
 import { format } from "date-fns"
-import { es } from "date-fns/locale"
+import { es } from "date-fns/locale/es"
 import { CalendarIcon, XIcon } from "lucide-react"
 
 import { cn } from "@/lib/utils"
@@ -18,6 +18,7 @@ interface DatePickerProps {
   className?: string
   placeholder?: string
   allowClear?: boolean
+  id?: string
 }
 
 export function DatePicker({
@@ -27,33 +28,37 @@ export function DatePicker({
   className,
   placeholder = "Selecciona una fecha",
   allowClear = true,
+  id,
 }: DatePickerProps) {
   const selectedDate = date ? new Date(date + 'T12:00:00') : undefined
 
   return (
     <div className="relative w-full group">
       <Popover>
-        <PopoverTrigger>
-          <Button
-            type="button"
-            variant="outline"
-            className={cn(
-              "w-full justify-start text-left font-normal transition-all hover:bg-muted/50",
-              !date && "text-muted-foreground",
-              className
-            )}
-            disabled={disabled}
-          >
-            <CalendarIcon className="mr-2 h-4 w-4 opacity-70" />
-            <span className="truncate">
-              {date ? (
-                format(selectedDate!, "PPP", { locale: es })
-              ) : (
-                <span>{placeholder}</span>
+        <PopoverTrigger
+          render={
+            <Button
+              type="button"
+              variant="outline"
+              className={cn(
+                "w-full justify-start text-left font-normal transition-all hover:bg-muted/50",
+                !date && "text-muted-foreground",
+                className
               )}
-            </span>
-          </Button>
-        </PopoverTrigger>
+              disabled={disabled}
+              id={id}
+            >
+              <CalendarIcon className="mr-2 h-4 w-4 opacity-70" />
+              <span className="truncate">
+                {date ? (
+                  format(selectedDate!, "PPP", { locale: es })
+                ) : (
+                  <span>{placeholder}</span>
+                )}
+              </span>
+            </Button>
+          }
+        />
         <PopoverContent className="w-auto p-0 border shadow-lg rounded-xl" align="start">
           <Calendar
             mode="single"

@@ -122,9 +122,9 @@ export function EditExpenseDialog({ open, onOpenChange, egreso }: EditExpenseDia
 
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label>Categoría</Label>
+                <Label htmlFor="edit-categoria">Categoría</Label>
                 <Select value={categoria} onValueChange={(v) => v && setCategoria(v)} disabled={isSubmitting}>
-                  <SelectTrigger>
+                  <SelectTrigger id="edit-categoria">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -155,6 +155,7 @@ export function EditExpenseDialog({ open, onOpenChange, egreso }: EditExpenseDia
                 date={fechaProgramada}
                 onChange={setFechaProgramada}
                 disabled={isSubmitting}
+                id="edit-fecha"
                 placeholder="Selecciona la fecha de pago"
               />
             </div>
