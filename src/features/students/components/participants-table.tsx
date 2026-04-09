@@ -11,7 +11,8 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
-import { Trash2Icon, PhoneIcon } from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import { Trash2Icon, PhoneIcon, ChevronLeftIcon, ChevronRightIcon, SearchIcon } from 'lucide-react'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -34,6 +35,8 @@ export function ParticipantsTable() {
   const { data, isLoading, error } = useStudents()
   const { mutate } = useSWRConfig()
   const [activeTab, setActiveTab] = useState<string>('todos')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [currentPage, setCurrentPage] = useState(1)
   const [participantToDelete, setParticipantToDelete] = useState<Perfil | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
 
@@ -45,15 +48,31 @@ export function ParticipantsTable() {
     )
   }
 
-  // Derived current array based on activeTab
+  // Derived current array based on activeTab and search
   const getFilteredData = () => {
     if (!data) return []
-    if (activeTab === 'comite') return data.staff
-    if (activeTab === 'alumnos') return data.students
-    return data.all
+    
+    let baseData = data.all
+    if (activeTab === 'comite') baseData = data.staff
+    if (activeTab === 'alumnos') baseData = data.students
+
+    if (!searchQuery.trim()) return baseData
+
+    const lowerQuery = searchQuery.toLowerCase().trim()
+    return baseData.filter((p) => {
+      const matchName = p.nombre_completo?.toLowerCase().includes(lowerQuery)
+      const matchDni = p.dni?.includes(lowerQuery)
+      const matchCodigo = p.codigo_u?.toLowerCase().includes(lowerQuery)
+      return matchName || matchDni || matchCodigo
+    })
   }
   
   const filteredData = getFilteredData()
+  const ROWS_PER_PAGE = 10
+  const totalPages = Math.max(1, Math.ceil(filteredData.length / ROWS_PER_PAGE))
+  const safePage = Math.min(currentPage, totalPages)
+  const startIndex = (safePage - 1) * ROWS_PER_PAGE
+  const paginatedData = filteredData.slice(startIndex, startIndex + ROWS_PER_PAGE)
 
   const handleDelete = async () => {
     if (!participantToDelete) return
@@ -95,15 +114,31 @@ export function ParticipantsTable() {
   return (
     <div className="space-y-4">
       {/* Toolbar: stacked on mobile, row on desktop */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full sm:w-auto">
-          <TabsList className="grid w-full grid-cols-3 sm:w-[300px]">
-            <TabsTrigger value="todos">Todos</TabsTrigger>
-            <TabsTrigger value="comite">Comité</TabsTrigger>
-            <TabsTrigger value="alumnos">Alumnos</TabsTrigger>
-          </TabsList>
-        </Tabs>
-        <CreateParticipantDialog className="w-full sm:w-auto" />
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center flex-1">
+          <Tabs value={activeTab} onValueChange={(val) => { setActiveTab(val); setCurrentPage(1); }} className="w-full sm:w-auto">
+            <TabsList className="grid w-full grid-cols-3 sm:w-[300px]">
+              <TabsTrigger value="todos">Todos</TabsTrigger>
+              <TabsTrigger value="comite">Comité</TabsTrigger>
+              <TabsTrigger value="alumnos">Alumnos</TabsTrigger>
+            </TabsList>
+          </Tabs>
+          
+          <div className="relative w-full sm:max-w-[320px]">
+            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="text"
+              placeholder="Buscar por nombre, DNI o código..."
+              className="pl-9 w-full bg-background"
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value)
+                setCurrentPage(1)
+              }}
+            />
+          </div>
+        </div>
+        <CreateParticipantDialog className="w-full lg:w-auto" />
       </div>
 
       {/* MOBILE Card View (hidden on sm+) */}
@@ -121,7 +156,7 @@ export function ParticipantsTable() {
             No hay participantes registrados en esta categoría.
           </div>
         ) : (
-          filteredData.map((participant) => (
+          paginatedData.map((participant) => (
             <div key={participant.id} className="rounded-xl border bg-card p-4 space-y-2.5 shadow-sm">
               {/* Header row: name + role badge */}
               <div className="flex items-start justify-between gap-2">
@@ -205,7 +240,7 @@ export function ParticipantsTable() {
                 </TableCell>
               </TableRow>
             ) : (
-              filteredData.map((participant) => (
+              paginatedData.map((participant) => (
                 <TableRow key={participant.id}>
                   <TableCell className="font-medium text-muted-foreground">{participant.dni}</TableCell>
                   <TableCell>{participant.codigo_u}</TableCell>
@@ -241,6 +276,43 @@ export function ParticipantsTable() {
           </TableBody>
         </Table>
       </div>
+
+      {/* FOOTER PAGINATION */}
+      {filteredData.length > 0 && (
+        <div className="flex items-center justify-between px-4 py-3 border rounded-lg bg-card shadow-sm mt-4">
+          <div className="text-xs text-muted-foreground hidden sm:block">
+            Mostrando <span className="font-medium text-foreground">{(safePage - 1) * ROWS_PER_PAGE + 1}</span> a <span className="font-medium text-foreground">{Math.min(safePage * ROWS_PER_PAGE, filteredData.length)}</span> de <span className="font-medium text-foreground">{filteredData.length}</span> participantes
+          </div>
+          
+          <div className="flex items-center gap-2 justify-between w-full sm:w-auto">
+            <span className="text-xs text-muted-foreground mr-2 font-medium">
+              Página {safePage} de {totalPages}
+            </span>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 gap-1"
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={safePage <= 1}
+              >
+                <ChevronLeftIcon className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Anterior</span>
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 gap-1"
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={safePage >= totalPages}
+              >
+                <span className="hidden sm:inline">Siguiente</span>
+                <ChevronRightIcon className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Resumen de Inscripciones */}
       {!isLoading && data && (

@@ -19,6 +19,8 @@ export type MatrixData = {
   cuotasPorMes: Record<string, CuotaRow> 
   // js-index-maps: Hash Map O(1) cruzando perfilId-cuotaId
   pagosMap: Record<string, PagoRow> 
+  // js-index-maps: Mapa de inscripciones (perfilId -> monto) para tratar Enero como Inscripción
+  inscripcionesMap: Record<string, number>
 }
 
 /**
@@ -29,13 +31,15 @@ export type MatrixData = {
  */
 export const usePaymentsMatrix = () => {
   const fetcher = async (): Promise<MatrixData> => {
-    const [inscripcionesResult, cuotasResult, pagosResult] = await Promise.all([
+    const [perfilesResult, inscripcionesResult, cuotasResult, pagosResult] = await Promise.all([
+      supabase
+        .from('perfiles')
+        .select('id, nombre_completo, dni, rol, codigo_u')
+        .order('nombre_completo', { ascending: true }),
+        
       supabase
         .from('inscripciones')
-        .select(`
-          perfil_id,
-          perfil:perfiles(id, nombre_completo, dni, rol, codigo_u)
-        `),
+        .select('perfil_id, monto'),
         
       supabase
         .from('config_cuotas')
@@ -47,18 +51,15 @@ export const usePaymentsMatrix = () => {
         .select('*')
     ])
 
+    if (perfilesResult.error) throw perfilesResult.error
     if (inscripcionesResult.error) throw inscripcionesResult.error
     if (cuotasResult.error) throw cuotasResult.error
     if (pagosResult.error) throw pagosResult.error
 
-    // Extraer perfiles (solo los inscritos)
-    // El as any evita colisiones locas de types en joins 1-to-1 con select anidado.
-    const inscripciones = inscripcionesResult.data as any[]
-    const perfilesInscritos = inscripciones
-      .map(i => i.perfil)
-      .filter(Boolean)
-      .sort((a, b) => a.nombre_completo.localeCompare(b.nombre_completo, 'es', { sensitivity: 'base' }))
+    // Ahora consideramos A TODOS los perfiles, para tener una matriz total
+    const perfilesInscritos = perfilesResult.data as PerfilRow[]
 
+    const inscripciones = inscripcionesResult.data as any[]
     const cuotasArray = cuotasResult.data as CuotaRow[]
     const pagosArray = pagosResult.data as PagoRow[]
 
@@ -77,7 +78,15 @@ export const usePaymentsMatrix = () => {
       }
     }
 
-    return { perfilesInscritos, cuotasPorMes, pagosMap }
+    const inscripcionesMap: Record<string, number> = {}
+    for (const i of inscripciones) {
+      if (i.perfil_id) {
+        // En caso de fallas de fetch cache, garantizamos un valor truthy
+        inscripcionesMap[i.perfil_id] = i.monto || 100 
+      }
+    }
+
+    return { perfilesInscritos, cuotasPorMes, pagosMap, inscripcionesMap }
   }
 
   const { data, error, isLoading, mutate } = useSWR<MatrixData, Error>(

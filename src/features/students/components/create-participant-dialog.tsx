@@ -68,6 +68,11 @@ export function CreateParticipantDialog({ className }: { className?: string }) {
       return
     }
 
+    if (telefono && telefono.length !== 9) {
+      toast.error('El celular debe tener exactamente 9 dígitos')
+      return
+    }
+
     if (!/^U\d{8}$/.test(codigoU)) {
       toast.error('El código debe tener el formato U + 8 números (Ej: U22205106)')
       return
@@ -96,7 +101,20 @@ export function CreateParticipantDialog({ className }: { className?: string }) {
       setOpen(false)
     } catch (error: any) {
       console.error('Error insertando perfil:', error)
-      toast.error(`Error: ${error.message || 'Error al registrar participante. Verifica DNI/Código.'}`)
+      let errorMessage = error.message || 'Error al registrar participante.'
+      
+      // Capturar el error 409 de restricción única (Unique Constraint Violation) en Postgres
+      if (error.code === '23505') {
+        if (error.message?.includes('codigo_u')) {
+          errorMessage = 'El Código Universitario ingresado ya pertenece a otro alumno.'
+        } else if (error.message?.includes('dni')) {
+          errorMessage = 'El DNI ingresado ya pertenece a otro alumno.'
+        } else {
+          errorMessage = 'El DNI o Código ya se encuentra registrado.'
+        }
+      }
+      
+      toast.error(errorMessage)
     } finally {
       setIsSubmitting(false)
     }

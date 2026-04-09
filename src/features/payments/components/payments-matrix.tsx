@@ -53,10 +53,23 @@ export function PaymentsMatrix() {
     if (!data) return {}
 
     const metrics: Record<string, { expected: number, collected: number }> = {}
-    const { cuotasPorMes, perfilesInscritos, pagosMap } = data
+    const { cuotasPorMes, perfilesInscritos, pagosMap, inscripcionesMap } = data
     const totalAlumnos = perfilesInscritos.length
 
     for (const mes of MESES_DEL_ANO) {
+      if (mes === 'Enero') {
+        // Enero es siempre Inscripción (S/ 100)
+        let collected = 0
+        for (const perfil of perfilesInscritos) {
+          collected += inscripcionesMap[perfil.id] || 0
+        }
+        metrics[mes] = {
+          expected: totalAlumnos * 100,
+          collected: collected
+        }
+        continue
+      }
+
       const cuota = cuotasPorMes[mes]
       if (cuota) {
         let collected = 0
@@ -92,13 +105,23 @@ export function PaymentsMatrix() {
     if (statusFilter !== 'all') {
       result = result.filter(perfil => {
         let isClean = true
-        for (const cuota of cuotasActivas) {
-          const pago = pagosMap[`${perfil.id}-${cuota.id}`]
-          if (!pago || pago.monto_pagado < cuota.monto) {
-            isClean = false
-            break // Cortocircuito por optimización
+        
+        // El mes de Enero (Inscripción) debe estar pagado
+        if (!data.inscripcionesMap[perfil.id]) {
+          isClean = false
+        }
+
+        // El resto de cuotas configuradas
+        if (isClean) {
+          for (const cuota of cuotasActivas) {
+            const pago = pagosMap[`${perfil.id}-${cuota.id}`]
+            if (!pago || pago.monto_pagado < cuota.monto) {
+              isClean = false
+              break 
+            }
           }
         }
+        
         return statusFilter === 'aldia' ? isClean : !isClean
       })
     }
@@ -154,42 +177,38 @@ export function PaymentsMatrix() {
   return (
     <div className="relative space-y-4">
       {/* TOOLBAR */}
-      <div className="flex flex-col gap-3 bg-card p-3 sm:p-4 rounded-xl border shadow-sm">
-        {/* Search bar: full width always */}
-        <div className="relative w-full">
-          <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input 
-            placeholder="Buscar por nombre, código o DNI..." 
-            className="pl-9 bg-background"
-            value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value)
-              setCurrentPage(1)
-            }}
-          />
-        </div>
-
-        {/* Filters row: tabs full-width on mobile, inline on desktop */}
-        <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between bg-card p-3 sm:p-4 rounded-xl border shadow-sm">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center flex-1">
           <Tabs 
             value={statusFilter} 
             onValueChange={(val) => {
               setStatusFilter(val as FilterStatus)
               setCurrentPage(1)
             }} 
-            className="w-full sm:flex-1"
+            className="w-full sm:w-auto"
           >
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-3 sm:w-[300px]">
               <TabsTrigger value="all" className="text-xs sm:text-sm">Todos</TabsTrigger>
               <TabsTrigger value="morosos" className="text-xs sm:text-sm data-[state=active]:text-rose-600 dark:data-[state=active]:text-rose-400">Morosos</TabsTrigger>
               <TabsTrigger value="aldia" className="text-xs sm:text-sm data-[state=active]:text-emerald-600 dark:data-[state=active]:text-emerald-400">Al Día</TabsTrigger>
             </TabsList>
           </Tabs>
 
-          <div className="w-full sm:w-auto">
-            <CreateInscripcionDialog className="w-full sm:w-auto" />
+          <div className="relative w-full sm:max-w-[320px]">
+            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input 
+              placeholder="Buscar por nombre, código o DNI..." 
+              className="pl-9 bg-background w-full"
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value)
+                setCurrentPage(1)
+              }}
+            />
           </div>
         </div>
+
+        <CreateInscripcionDialog className="w-full lg:w-auto" />
       </div>
 
       {/* MATRIX */}
@@ -205,8 +224,9 @@ export function PaymentsMatrix() {
                 
                 {/* Calendario Fijo 12 Meses (Densidad compacta) */}
                 {MESES_DEL_ANO.map((mes) => {
-                  const configCuota = cuotasPorMes[mes]
+                  const configCuota = mes === 'Enero' ? { monto: 100, fecha_vencimiento: null } : cuotasPorMes[mes]
                   const shortMes = mes.slice(0, 3).toUpperCase()
+                  const isJanuary = mes === 'Enero'
                   
                   return (
                     <TableHead 
@@ -217,7 +237,7 @@ export function PaymentsMatrix() {
                       )}
                     >
                       <div className="flex flex-col items-center justify-center gap-0.5">
-                        <span className="text-[10px] tracking-wider uppercase">{shortMes}</span>
+                        <span className="text-[10px] tracking-wider uppercase">{isJanuary ? 'INSC' : shortMes}</span>
                         <div className="flex gap-1 items-center opacity-70">
                           <span className="text-[10px] font-normal tabular-nums leading-none">
                             {configCuota ? `${configCuota.monto}` : '-'}
@@ -273,6 +293,27 @@ export function PaymentsMatrix() {
 
                   {/* React.memo Rendering de Celdas Fijas */}
                   {MESES_DEL_ANO.map((mes) => {
+                    // Caso Especial: Enero (Inscripción)
+                    if (mes === 'Enero') {
+                      const isInscrito = !!data.inscripcionesMap[perfil.id]
+                      return (
+                        <TableCell key={`${perfil.id}-insc`} className="border-r border-border/40 p-0">
+                          <div className="flex h-10 w-full items-center justify-center">
+                            {isInscrito ? (
+                              <div className="flex flex-col items-center leading-none">
+                                <div className="h-4 w-4 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                                  <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></div>
+                                </div>
+                                <span className="text-[8px] font-bold text-emerald-600 mt-0.5 uppercase tracking-tighter">Inscrito</span>
+                              </div>
+                            ) : (
+                              <div className="h-1.5 w-1.5 rounded-full bg-rose-500/40"></div>
+                            )}
+                          </div>
+                        </TableCell>
+                      )
+                    }
+
                     const cuota = cuotasPorMes[mes]
                     
                     // Si el mes no ha sido instanciado en Settings, bloqueado.

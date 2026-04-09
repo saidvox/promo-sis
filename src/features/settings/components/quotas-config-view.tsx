@@ -114,7 +114,7 @@ export function QuotasConfigView() {
     <div className="space-y-6">
       {/* MOBILE VIEW: Cards */}
       <div className="grid gap-3 sm:hidden">
-        {MESES_DEL_ANO.map((mes) => {
+        {MESES_DEL_ANO.filter(m => m !== 'Enero').map((mes) => {
           const config = data[mes]
           const isActive = !!config
 
@@ -196,7 +196,7 @@ export function QuotasConfigView() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {MESES_DEL_ANO.map((mes) => {
+            {MESES_DEL_ANO.filter(m => m !== 'Enero').map((mes) => {
               const config = data[mes]
               const isActive = !!config
 
