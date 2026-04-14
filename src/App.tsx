@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { SparklesIcon } from 'lucide-react'
+import { SWRConfig } from 'swr'
 import { AuthProvider } from '@/components/auth-provider'
 import { AppSidebar } from '@/components/app-sidebar'
 import { SiteHeader } from '@/components/site-header'
@@ -24,6 +25,14 @@ const PAGE_TITLES = {
   activities: 'Actividades de Recaudacion',
   settings: 'Configuracion',
 } as const
+
+const swrViewConfig = {
+  revalidateOnFocus: false,
+  revalidateIfStale: false,
+  keepPreviousData: true,
+  dedupingInterval: 30_000,
+  focusThrottleInterval: 30_000,
+}
 
 function MainContent() {
   const { currentPage } = useNavigation()
@@ -87,16 +96,18 @@ function AppContent() {
 
   return (
     <ThemeProvider defaultTheme="dark" storageKey="promo-ui-theme">
-      <TooltipProvider>
-        <Toaster position="top-center" />
-        {!session ? (
-          <LoginPage />
-        ) : (
-          <NavigationProvider>
-            <MainContent />
-          </NavigationProvider>
-        )}
-      </TooltipProvider>
+      <SWRConfig value={swrViewConfig}>
+        <TooltipProvider>
+          <Toaster position="top-center" />
+          {!session ? (
+            <LoginPage />
+          ) : (
+            <NavigationProvider>
+              <MainContent />
+            </NavigationProvider>
+          )}
+        </TooltipProvider>
+      </SWRConfig>
     </ThemeProvider>
   )
 }
