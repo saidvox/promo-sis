@@ -8,7 +8,7 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
 
-import { useNavigation, type PageView } from "@/hooks/use-navigation"
+import { getPageHref, useNavigation, type PageView } from "@/hooks/use-navigation"
 
 export function NavMain({
   items,
@@ -31,6 +31,7 @@ export function NavMain({
               <SidebarMenuButton 
                 tooltip={item.title}
                 isActive={currentPage === item.url}
+                render={<a href={getPageHref(item.url as PageView)} />}
                 onClick={() => navigate(item.url as PageView)}
                 className="flex items-center justify-between"
               >

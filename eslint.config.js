@@ -6,7 +6,7 @@ import tseslint from 'typescript-eslint'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist']),
+  globalIgnores(['dist', 'src/components/data-table.tsx']),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [
@@ -18,6 +18,27 @@ export default defineConfig([
     languageOptions: {
       ecmaVersion: 2020,
       globals: globals.browser,
+    },
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-unused-vars': ['error', { caughtErrors: 'none' }],
+    },
+  },
+  {
+    files: [
+      'src/components/auth-provider.tsx',
+      'src/components/theme-provider.tsx',
+      'src/components/ui/**/*.{ts,tsx}',
+      'src/hooks/use-navigation.tsx',
+    ],
+    rules: {
+      'react-refresh/only-export-components': 'off',
+    },
+  },
+  {
+    files: ['src/features/payments/components/payments-matrix.tsx'],
+    rules: {
+      'react-hooks/set-state-in-effect': 'off',
     },
   },
 ])

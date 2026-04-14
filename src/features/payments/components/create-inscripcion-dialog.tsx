@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { PlusIcon, Loader2Icon, CheckIcon, ChevronsUpDownIcon } from 'lucide-react'
 import { useSWRConfig } from 'swr'
 import { supabase } from '@/lib/supabase/client'
-import { useStudents } from '@/features/students/api/use-students'
+import { getErrorMessage } from '@/lib/error-utils'
+import { useStudents, type Perfil } from '@/features/students/api/use-students'
 import { useInscripciones } from '../api/use-inscripciones'
 import { getRoleColor } from '@/features/students/utils/get-role-color'
 
@@ -60,11 +61,10 @@ export function CreateInscripcionDialog({ className }: { className?: string }) {
     }
   }
 
-  // Filtrar a los estudiantes que YA están inscritos para no mostrarlos
-  const enrolledIds = new Set(inscripciones?.map(i => i.perfil_id) || [])
-  const allStudents = studentsGroup?.all || []
-  const availableStudents = allStudents.filter((s: any) => !enrolledIds.has(s.id))
-  const selectedStudent = availableStudents.find((s: any) => s.id === perfilId)
+  const enrolledIds = new Set(inscripciones?.map((inscripcion) => inscripcion.perfil_id) ?? [])
+  const allStudents: Perfil[] = studentsGroup?.all ?? []
+  const availableStudents = allStudents.filter((student) => !enrolledIds.has(student.id))
+  const selectedStudent = availableStudents.find((student) => student.id === perfilId)
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -81,26 +81,25 @@ export function CreateInscripcionDialog({ className }: { className?: string }) {
         .from('inscripciones')
         .insert({
           perfil_id: perfilId,
-          monto: 100.00,
-          metodo_pago: metodoPago
+          monto: 100.0,
+          metodo_pago: metodoPago,
         })
 
       if (error) throw error
 
-      toast.success('Inscripción registrada correctamente', {
-        description: 'El alumno ha sido desbloqueado en la Sábana de Pagos.',
+      toast.success('InscripciÃ³n registrada correctamente', {
+        description: 'El alumno ha sido desbloqueado en la SÃ¡bana de Pagos.',
       })
-      
-      // Invalidar todos los arreglos de historial y matrices
+
       mutate('api/inscripciones')
       mutate('api/payments-matrix')
-      mutate('api/students') // Refrescar columna "Inscripción" en Participantes
-      
+      mutate('api/students')
+
       handleOpenChange(false)
-    } catch (error: any) {
-      console.error('Error insertando inscripción:', error)
-      toast.error('Error al registrar inscripción.', {
-        description: error.message
+    } catch (error: unknown) {
+      console.error('Error insertando inscripciÃ³n:', error)
+      toast.error('Error al registrar inscripciÃ³n.', {
+        description: getErrorMessage(error, 'No se pudo registrar la inscripciÃ³n.'),
       })
     } finally {
       setIsSubmitting(false)
@@ -113,24 +112,23 @@ export function CreateInscripcionDialog({ className }: { className?: string }) {
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger
         render={
-          <Button variant="default" className={cn("gap-2 bg-indigo-600 hover:bg-indigo-700 text-white shadow-md", className)}>
+          <Button variant="default" className={cn('gap-2 bg-indigo-600 text-white shadow-md hover:bg-indigo-700', className)}>
             <PlusIcon className="h-4 w-4" />
-            <span>Registrar Inscripción</span>
+            <span>Registrar InscripciÃ³n</span>
           </Button>
         }
       />
-      
+
       <DialogContent className="sm:max-w-[425px]">
         <form onSubmit={onSubmit}>
           <DialogHeader>
-            <DialogTitle>Nueva Inscripción</DialogTitle>
+            <DialogTitle>Nueva InscripciÃ³n</DialogTitle>
             <DialogDescription>
               Habilita a un nuevo estudiante en el sistema de pagos cobrando la cuota de pre-ingreso.
             </DialogDescription>
           </DialogHeader>
 
           <div className="grid gap-4 py-4">
-            {/* Buscador de Alumno (Combobox inteligente) */}
             <div className="grid gap-2">
               <Label htmlFor="perfil">Alumno (No Inscrito)</Label>
               <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
@@ -164,10 +162,10 @@ export function CreateInscripcionDialog({ className }: { className?: string }) {
                     <CommandList>
                       <CommandEmpty>No se encontraron alumnos pendientes.</CommandEmpty>
                       <CommandGroup>
-                        {availableStudents.map((perfil: any) => (
+                        {availableStudents.map((perfil) => (
                           <CommandItem
                             key={perfil.id}
-                            value={`${perfil.nombre_completo} ${perfil.dni}`} // Ayuda a la indexación
+                            value={`${perfil.nombre_completo} ${perfil.dni}`}
                             onSelect={() => {
                               setPerfilId(perfil.id)
                               setOpenCombobox(false)
@@ -175,18 +173,18 @@ export function CreateInscripcionDialog({ className }: { className?: string }) {
                           >
                             <CheckIcon
                               className={cn(
-                                "mr-2 h-4 w-4",
-                                perfilId === perfil.id ? "opacity-100" : "opacity-0"
+                                'mr-2 h-4 w-4',
+                                perfilId === perfil.id ? 'opacity-100' : 'opacity-0'
                               )}
                             />
                             <div className="flex flex-col">
                               <span>{perfil.nombre_completo}</span>
-                              <div className="flex items-center gap-2 mt-0.5">
+                              <div className="mt-0.5 flex items-center gap-2">
                                 <span className="text-xs text-muted-foreground">
                                   DNI: {perfil.dni}
                                 </span>
                                 {perfil.rol !== 'Alumno' && (
-                                  <Badge variant="outline" className={cn("text-[10px] px-1 py-0 h-4 border-transparent", getRoleColor(perfil.rol))}>
+                                  <Badge variant="outline" className={cn('h-4 border-transparent px-1 py-0 text-[10px]', getRoleColor(perfil.rol))}>
                                     {perfil.rol}
                                   </Badge>
                                 )}
@@ -201,34 +199,32 @@ export function CreateInscripcionDialog({ className }: { className?: string }) {
               </Popover>
             </div>
 
-            {/* Monto de Inscripción (Bloqueado) */}
-            <div className="grid gap-2 mt-2">
+            <div className="mt-2 grid gap-2">
               <Label htmlFor="monto">Monto Obligatorio</Label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">S/</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 font-medium text-muted-foreground">S/</span>
                 <Input
                   id="monto"
                   type="text"
                   value="100.00"
                   disabled
-                  className="pl-8 font-semibold text-lg bg-muted text-muted-foreground"
+                  className="bg-muted pl-8 text-lg font-semibold text-muted-foreground"
                 />
               </div>
               <p className="text-xs text-muted-foreground">
-                El precio de inscripción está congelado por configuración.
+                El precio de inscripciÃ³n estÃ¡ congelado por configuraciÃ³n.
               </p>
             </div>
 
-            {/* Método de Pago */}
-            <div className="grid gap-2 mt-2">
-              <Label htmlFor="metodo_pago">Tipo de Operación</Label>
+            <div className="mt-2 grid gap-2">
+              <Label htmlFor="metodo_pago">Tipo de OperaciÃ³n</Label>
               <Select
                 value={metodoPago}
-                onValueChange={(val) => val && setMetodoPago(val)}
+                onValueChange={(value) => value && setMetodoPago(value)}
                 disabled={isSubmitting}
               >
                 <SelectTrigger id="metodo_pago">
-                  <SelectValue placeholder="Selecciona el método" />
+                  <SelectValue placeholder="Selecciona el mÃ©todo" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Efectivo">Billetes / Efectivo</SelectItem>
@@ -240,7 +236,7 @@ export function CreateInscripcionDialog({ className }: { className?: string }) {
               </Select>
             </div>
           </div>
-          
+
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => handleOpenChange(false)} disabled={isSubmitting}>
               Cancelar
@@ -252,7 +248,7 @@ export function CreateInscripcionDialog({ className }: { className?: string }) {
                   Registrando...
                 </>
               ) : (
-                'Finalizar Inscripción'
+                'Finalizar InscripciÃ³n'
               )}
             </Button>
           </DialogFooter>

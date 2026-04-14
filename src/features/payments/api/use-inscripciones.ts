@@ -22,7 +22,7 @@ export const useInscripciones = () => {
     if (error) throw error
     
     // Type assertion since we know we're joining
-    return (data as any) as InscripcionWithPerfil[]
+    return (data ?? []) as unknown as InscripcionWithPerfil[]
   }
 
   const { data, error, isLoading, mutate } = useSWR<InscripcionWithPerfil[], Error>(

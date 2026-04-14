@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect, lazy, Suspense } from 'react'
+import { useState, useCallback, useMemo, lazy, Suspense } from 'react'
 import { Loader2Icon, ShieldAlertIcon, SearchIcon, ChevronLeftIcon, ChevronRightIcon } from 'lucide-react'
 import { usePaymentsMatrix, MESES_DEL_ANO } from '../api/use-payments-matrix'
 import { PaymentMatrixCell } from './payment-matrix-cell'
@@ -142,13 +142,6 @@ export function PaymentsMatrix() {
     }
   }, [data, searchQuery, statusFilter, currentPage])
 
-  // Sync state if safePage corrected out of bounds
-  useEffect(() => {
-    if (filteredAndPaginated.safePage !== currentPage && data) {
-      setCurrentPage(filteredAndPaginated.safePage)
-    }
-  }, [filteredAndPaginated.safePage, currentPage, data])
-
   // ----------------------------------------------------
   // RENDER PIPELINE
   // ----------------------------------------------------
@@ -172,7 +165,7 @@ export function PaymentsMatrix() {
   }
 
   const { cuotasPorMes, pagosMap, perfilesInscritos } = data
-  const { paginatedList, totalList, totalPages } = filteredAndPaginated
+  const { paginatedList, totalList, totalPages, safePage } = filteredAndPaginated
 
   return (
     <div className="relative space-y-4">
@@ -404,7 +397,7 @@ export function PaymentsMatrix() {
           <div className="text-xs text-muted-foreground hidden sm:block">
             {totalList.length > 0 ? (
               <span>
-                Mostrando <span className="font-medium text-foreground">{(currentPage - 1) * ROWS_PER_PAGE + 1}</span> a <span className="font-medium text-foreground">{Math.min(currentPage * ROWS_PER_PAGE, totalList.length)}</span> de <span className="font-medium text-foreground">{totalList.length}</span> resultados
+                Mostrando <span className="font-medium text-foreground">{(safePage - 1) * ROWS_PER_PAGE + 1}</span> a <span className="font-medium text-foreground">{Math.min(safePage * ROWS_PER_PAGE, totalList.length)}</span> de <span className="font-medium text-foreground">{totalList.length}</span> resultados
               </span>
             ) : (
               <span>Sin resultados</span>
@@ -413,14 +406,14 @@ export function PaymentsMatrix() {
           
           <div className="flex items-center gap-2">
             <span className="text-xs text-muted-foreground mr-2 font-medium">
-              Página {currentPage} de {totalPages}
+              Página {safePage} de {totalPages}
             </span>
             <Button
               variant="outline"
               size="sm"
               className="h-8 gap-1"
               onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-              disabled={currentPage <= 1}
+              disabled={safePage <= 1}
             >
               <ChevronLeftIcon className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">Anterior</span>
@@ -430,7 +423,7 @@ export function PaymentsMatrix() {
               size="sm"
               className="h-8 gap-1"
               onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-              disabled={currentPage >= totalPages}
+              disabled={safePage >= totalPages}
             >
               <span className="hidden sm:inline">Siguiente</span>
               <ChevronRightIcon className="h-3.5 w-3.5" />

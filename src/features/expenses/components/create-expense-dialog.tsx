@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { PlusIcon, Loader2Icon } from 'lucide-react'
 import { useSWRConfig } from 'swr'
 import { supabase } from '@/lib/supabase/client'
+import { getErrorMessage } from '@/lib/error-utils'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
@@ -72,8 +73,8 @@ export function CreateExpenseDialog({ className }: { className?: string }) {
       mutate('api/expenses')
       mutate('api/dashboard-stats')
       handleOpenChange(false)
-    } catch (error: any) {
-      toast.error(error.message || 'Error al registrar egreso')
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, 'Error al registrar egreso'))
     } finally {
       setIsSubmitting(false)
     }

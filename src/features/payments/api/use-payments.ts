@@ -31,7 +31,7 @@ export const usePayments = () => {
       throw error
     }
 
-    return data as any as PagoConDetalles[]
+    return (data ?? []) as unknown as PagoConDetalles[]
   }
 
   const { data, error, isLoading, mutate } = useSWR<PagoConDetalles[], Error>('api/payments', fetcher)

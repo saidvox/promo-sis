@@ -23,7 +23,7 @@ export const useStudents = () => {
       throw error
     }
 
-    const all = (data as any) as Perfil[]
+    const all = (data ?? []) as unknown as Perfil[]
     const students = all.filter((p) => p.rol === 'Alumno')
     const staff = all.filter((p) => p.rol !== 'Alumno')
 

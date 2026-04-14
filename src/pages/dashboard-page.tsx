@@ -198,35 +198,84 @@ export function DashboardPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="flex flex-col space-y-3">
-               {isStatsLoading ? (
-                 <div className="space-y-2">
-                   <Skeleton className="h-4 w-full" />
-                   <Skeleton className="h-8 w-full rounded-full" />
-                 </div>
-               ) : (
-                 <>
-                  <div className="flex w-full items-center justify-between">
-                    <div className="flex flex-col">
-                      <span className="text-sm font-semibold text-foreground/80 lowercase first-letter:uppercase">Fiesta de Gala</span>
-                      <span className="text-xs text-muted-foreground">Meta: S/ {GOAL_AMOUNT.toLocaleString('es-PE')}</span>
+            {isStatsLoading ? (
+              <div className="space-y-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-28" />
+                    <Skeleton className="h-8 w-44" />
+                  </div>
+                  <Skeleton className="h-8 w-16 rounded-full" />
+                </div>
+                <Skeleton className="h-16 w-full rounded-3xl" />
+                <div className="flex justify-between gap-3">
+                  <Skeleton className="h-10 w-24" />
+                  <Skeleton className="h-10 w-24" />
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary/70">
+                      Fiesta de Gala
+                    </p>
+                    <div className="mt-2 flex items-end gap-2">
+                      <span className="text-sm font-medium text-primary/70">S/</span>
+                      <span className="truncate text-3xl font-bold tracking-tight text-foreground tabular-nums sm:text-4xl">
+                        {(stats?.totalIncome || 0).toLocaleString('es-PE', { maximumFractionDigits: 0 })}
+                      </span>
                     </div>
-                    <Badge variant="outline" className="font-bold tabular-nums bg-primary/5 text-primary border-primary/20">
-                      {progressPercentage.toFixed(1)}%
-                    </Badge>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      de S/ {GOAL_AMOUNT.toLocaleString('es-PE')} proyectados
+                    </p>
                   </div>
-                  <div className="relative h-3 w-full overflow-hidden rounded-full bg-secondary/50 p-[1px]">
-                    <div
-                      className="h-full bg-gradient-to-r from-primary/80 to-primary transition-all duration-1000 ease-in-out rounded-full shadow-[0_0_10px_rgba(var(--primary),0.3)]"
-                      style={{ width: `${progressPercentage}%` }}
-                    />
+                  <Badge
+                    variant="outline"
+                    className="rounded-full border-primary/20 bg-primary/10 px-2.5 py-1 font-bold tabular-nums text-primary"
+                  >
+                    {progressPercentage.toFixed(1)}%
+                  </Badge>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                    <span>Ritmo de avance</span>
+                    <span className="tabular-nums normal-case tracking-normal">
+                      {progressPercentage.toFixed(1)}% completado
+                    </span>
                   </div>
-                  <p className="text-[10px] text-muted-foreground text-center italic">
-                    Faltan S/ {(GOAL_AMOUNT - (stats?.totalIncome || 0)).toLocaleString('es-PE')} para alcanzar la meta.
-                  </p>
-                 </>
-               )}
-            </div>
+                  <div className="relative overflow-hidden rounded-3xl border border-border/60 bg-muted/30 px-2 py-2.5">
+                    <div className="relative h-8 rounded-2xl bg-background/80 ring-1 ring-white/5">
+                      <div className="absolute inset-y-0 left-0 w-full rounded-2xl bg-[linear-gradient(90deg,transparent_0%,transparent_24.5%,rgba(255,255,255,0.08)_24.5%,rgba(255,255,255,0.08)_25.5%,transparent_25.5%,transparent_49.5%,rgba(255,255,255,0.08)_49.5%,rgba(255,255,255,0.08)_50.5%,transparent_50.5%,transparent_74.5%,rgba(255,255,255,0.08)_74.5%,rgba(255,255,255,0.08)_75.5%,transparent_75.5%)]" />
+                      <div
+                        className="relative h-full rounded-2xl bg-linear-to-r from-emerald-500 via-teal-400 to-primary transition-all duration-1000 ease-out"
+                        style={{ width: `${Math.max(progressPercentage, 6)}%` }}
+                      >
+                        <div className="absolute inset-y-1 right-1 w-8 rounded-full bg-white/35 blur-md" />
+                        <div className="absolute right-1 top-1/2 h-4 w-4 -translate-y-1/2 rounded-full border border-white/50 bg-white/80 shadow-[0_0_16px_rgba(255,255,255,0.45)]" />
+                      </div>
+                    </div>
+                    <div className="mt-2 flex items-center justify-between px-1 text-[10px] font-medium text-muted-foreground">
+                      <span>0%</span>
+                      <span>25%</span>
+                      <span>50%</span>
+                      <span>75%</span>
+                      <span>100%</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-1 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+                  <span>
+                    Recaudado: <span className="font-semibold text-foreground tabular-nums">S/ {(stats?.totalIncome || 0).toLocaleString('es-PE', { maximumFractionDigits: 0 })}</span>
+                  </span>
+                  <span>
+                    Falta: <span className="font-semibold text-foreground tabular-nums">S/ {(GOAL_AMOUNT - (stats?.totalIncome || 0)).toLocaleString('es-PE', { maximumFractionDigits: 0 })}</span>
+                  </span>
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
       </div>

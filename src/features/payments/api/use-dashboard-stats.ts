@@ -1,5 +1,8 @@
 import useSWR from 'swr'
 import { supabase } from '@/lib/supabase/client'
+import type { Database } from '@/types/database.types'
+
+type EgresoStatsRow = Pick<Database['public']['Tables']['egresos']['Row'], 'monto' | 'estado'>
 
 export type DashboardStats = {
   totalIncome: number
@@ -38,9 +41,9 @@ export const useDashboardStats = () => {
     const totalPagos = pagosRes.data.reduce((acc, cur) => acc + cur.monto_pagado, 0)
     const totalInscripciones = inscripcionesRes.data.reduce((acc, cur) => acc + cur.monto, 0)
     const totalIncome = totalPagos + totalInscripciones
-    const totalExpenses = egresosRes.data
-      .filter((e: any) => e.estado === 'Pagado')
-      .reduce((acc: number, cur: any) => acc + cur.monto, 0)
+    const totalExpenses = (egresosRes.data as EgresoStatsRow[])
+      .filter((egreso) => egreso.estado === 'Pagado')
+      .reduce((acc, cur) => acc + cur.monto, 0)
 
     // Evaluar deudores reales desde la Matriz:
     // Un alumno tiene deuda si existe al menos 1 cuota activa que NO pagó completamente

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Loader2Icon } from 'lucide-react'
 import { useSWRConfig } from 'swr'
 import { supabase } from '@/lib/supabase/client'
+import { getErrorMessage } from '@/lib/error-utils'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
@@ -78,8 +79,8 @@ export function EditExpenseDialog({ open, onOpenChange, egreso }: EditExpenseDia
       mutate('api/expenses')
       mutate('api/dashboard-stats')
       onOpenChange(false)
-    } catch (error: any) {
-      toast.error(error.message || 'Error al actualizar egreso')
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, 'Error al actualizar egreso'))
     } finally {
       setIsSubmitting(false)
     }

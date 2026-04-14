@@ -30,6 +30,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { EllipsisVerticalIcon, CircleUserRoundIcon, LogOutIcon, UserIcon, ShieldIcon, MailIcon, CameraIcon, Loader2Icon } from "lucide-react"
 import { supabase } from "@/lib/supabase/client"
+import { getErrorMessage } from "@/lib/error-utils"
 import { toast } from "sonner"
 import { useAuth } from "@/hooks/use-auth"
 
@@ -55,7 +56,7 @@ export function NavUser({
       if (error) throw error
       toast.success("Sesión cerrada correctamente")
       window.location.reload() 
-    } catch (error: any) {
+    } catch {
       toast.error("Error al cerrar sesión")
     }
   }
@@ -104,9 +105,9 @@ export function NavUser({
 
       toast.success('¡Foto de perfil actualizada!')
       if (refreshProfile) refreshProfile()
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error uploading avatar:', error)
-      toast.error('No se pudo subir la imagen')
+      toast.error(getErrorMessage(error, 'No se pudo subir la imagen'))
     } finally {
       setIsUploading(false)
     }

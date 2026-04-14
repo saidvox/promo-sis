@@ -4,6 +4,7 @@ import { es } from 'date-fns/locale'
 import { WalletIcon, BuildingIcon, PackageIcon, ClockIcon, Trash2Icon, PencilIcon, BanknoteIcon } from 'lucide-react'
 import { useSWRConfig } from 'swr'
 import { supabase } from '@/lib/supabase/client'
+import { getErrorMessage } from '@/lib/error-utils'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { useExpenses, type EgresoRow, type EgresoWithAbonos } from '../api/use-expenses'
@@ -71,8 +72,8 @@ export function ExpensesTable() {
       mutate('api/expenses')
       mutate('api/dashboard-stats')
       setEgresoToDelete(null)
-    } catch (err: any) {
-      toast.error(err.message || 'Error al eliminar')
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, 'Error al eliminar'))
     } finally {
       setIsDeleting(false)
     }

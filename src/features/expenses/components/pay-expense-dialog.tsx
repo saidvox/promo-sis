@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Loader2Icon, AlertTriangleIcon, CheckCircle2Icon, BanknoteIcon } from 'lucide-react'
 import { useSWRConfig } from 'swr'
 import { supabase } from '@/lib/supabase/client'
+import { getErrorMessage } from '@/lib/error-utils'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 
@@ -91,8 +92,8 @@ export function PayExpenseDialog({ open, onOpenChange, egreso, saldoDisponible }
       mutate('api/expenses')
       mutate('api/dashboard-stats')
       onOpenChange(false)
-    } catch (error: any) {
-      toast.error(error.message || 'Error al procesar el pago')
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, 'Error al procesar el pago'))
     } finally {
       setIsSubmitting(false)
     }

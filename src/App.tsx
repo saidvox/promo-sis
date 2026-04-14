@@ -1,35 +1,42 @@
-import { Toaster } from '@/components/ui/sonner'
-import { TooltipProvider } from '@/components/ui/tooltip'
-import { ThemeProvider } from '@/components/theme-provider'
-import { useAuth } from '@/hooks/use-auth'
-import { LoginPage } from '@/pages/login-page'
-import { DashboardPage } from '@/pages/dashboard-page'
-import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar'
+import { useEffect } from 'react'
+import { SparklesIcon } from 'lucide-react'
+import { AuthProvider } from '@/components/auth-provider'
 import { AppSidebar } from '@/components/app-sidebar'
 import { SiteHeader } from '@/components/site-header'
-
+import { ThemeProvider } from '@/components/theme-provider'
+import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
+import { Toaster } from '@/components/ui/sonner'
+import { TooltipProvider } from '@/components/ui/tooltip'
+import { useAuth } from '@/hooks/use-auth'
 import { NavigationProvider, useNavigation } from '@/hooks/use-navigation'
-import { StudentsPage } from '@/pages/students-page'
+import { DashboardPage } from '@/pages/dashboard-page'
+import { ExpensesPage } from '@/pages/expenses-page'
+import { LoginPage } from '@/pages/login-page'
 import { PaymentsPage } from '@/pages/payments-page'
 import { SettingsPage } from '@/pages/settings-page'
-import { ExpensesPage } from '@/pages/expenses-page'
-import { SparklesIcon } from 'lucide-react'
+import { StudentsPage } from '@/pages/students-page'
+
+const PAGE_TITLES = {
+  dashboard: 'Dashboard Principal',
+  students: 'Gestion de Participantes',
+  payments: 'Registro de Pagos',
+  expenses: 'Control de Egresos',
+  activities: 'Actividades de Recaudacion',
+  settings: 'Configuracion',
+} as const
 
 function MainContent() {
   const { currentPage } = useNavigation()
+
+  useEffect(() => {
+    document.title = `${PAGE_TITLES[currentPage]} | Promocion Sistemas`
+  }, [currentPage])
 
   return (
     <SidebarProvider>
       <AppSidebar />
       <SidebarInset>
-        <SiteHeader title={
-          currentPage === 'dashboard' ? 'Dashboard Principal' :
-          currentPage === 'students' ? 'Gestión de Participantes' :
-          currentPage === 'payments' ? 'Registro de Pagos' :
-          currentPage === 'expenses' ? 'Control de Egresos' :
-          currentPage === 'activities' ? 'Actividades de Recaudación' :
-          'Configuración'
-        } />
+        <SiteHeader title={PAGE_TITLES[currentPage]} />
         {currentPage === 'dashboard' && <DashboardPage />}
         {currentPage === 'students' && <StudentsPage />}
         {currentPage === 'payments' && <PaymentsPage />}
@@ -38,11 +45,12 @@ function MainContent() {
           <div className="flex flex-1 items-center justify-center p-4">
             <div className="text-center space-y-4">
               <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-primary/10 ring-1 ring-primary/20">
-                <SparklesIcon className="h-10 w-10 text-primary animate-pulse" />
+                <SparklesIcon className="h-10 w-10 animate-pulse text-primary" />
               </div>
-              <h2 className="text-2xl font-bold tracking-tight">Próximamente</h2>
-              <p className="text-muted-foreground max-w-xs mx-auto">
-                Estamos preparando este módulo para gestionar actividades de recaudación adicionales (rifas, eventos, etc).
+              <h2 className="text-2xl font-bold tracking-tight">Proximamente</h2>
+              <p className="mx-auto max-w-xs text-muted-foreground">
+                Estamos preparando este modulo para gestionar actividades de
+                recaudacion adicionales (rifas, eventos, etc).
               </p>
             </div>
           </div>
@@ -54,6 +62,14 @@ function MainContent() {
 }
 
 function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
+  )
+}
+
+function AppContent() {
   const { session, isInitializing } = useAuth()
 
   if (isInitializing) {
@@ -72,7 +88,7 @@ function App() {
   return (
     <ThemeProvider defaultTheme="dark" storageKey="promo-ui-theme">
       <TooltipProvider>
-        <Toaster position="top-center" theme="dark" />
+        <Toaster position="top-center" />
         {!session ? (
           <LoginPage />
         ) : (
