@@ -87,8 +87,8 @@ export function CreateInscripcionDialog({ className }: { className?: string }) {
 
       if (error) throw error
 
-      toast.success('InscripciÃ³n registrada correctamente', {
-        description: 'El alumno ha sido desbloqueado en la SÃ¡bana de Pagos.',
+      toast.success('Inscripción registrada correctamente', {
+        description: 'El alumno ha sido desbloqueado en la Sabana de Pagos.',
       })
 
       mutate('api/inscripciones')
@@ -97,9 +97,9 @@ export function CreateInscripcionDialog({ className }: { className?: string }) {
 
       handleOpenChange(false)
     } catch (error: unknown) {
-      console.error('Error insertando inscripciÃ³n:', error)
-      toast.error('Error al registrar inscripciÃ³n.', {
-        description: getErrorMessage(error, 'No se pudo registrar la inscripciÃ³n.'),
+      console.error('Error insertando inscripción:', error)
+      toast.error('Error al registrar inscripción.', {
+        description: getErrorMessage(error, 'No se pudo registrar la inscripción.'),
       })
     } finally {
       setIsSubmitting(false)
@@ -112,9 +112,15 @@ export function CreateInscripcionDialog({ className }: { className?: string }) {
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger
         render={
-          <Button variant="default" className={cn('gap-2 bg-indigo-600 text-white shadow-md hover:bg-indigo-700', className)}>
+          <Button
+            variant="default"
+            className={cn(
+              'gap-2 bg-indigo-600 text-white shadow-md hover:bg-indigo-700',
+              className
+            )}
+          >
             <PlusIcon className="h-4 w-4" />
-            <span>Registrar InscripciÃ³n</span>
+            <span>Registrar Inscripción</span>
           </Button>
         }
       />
@@ -122,7 +128,7 @@ export function CreateInscripcionDialog({ className }: { className?: string }) {
       <DialogContent className="sm:max-w-[425px]">
         <form onSubmit={onSubmit}>
           <DialogHeader>
-            <DialogTitle>Nueva InscripciÃ³n</DialogTitle>
+            <DialogTitle>Nueva Inscripción</DialogTitle>
             <DialogDescription>
               Habilita a un nuevo estudiante en el sistema de pagos cobrando la cuota de pre-ingreso.
             </DialogDescription>
@@ -166,6 +172,7 @@ export function CreateInscripcionDialog({ className }: { className?: string }) {
                           <CommandItem
                             key={perfil.id}
                             value={`${perfil.nombre_completo} ${perfil.dni}`}
+                            className="items-start gap-3 py-3"
                             onSelect={() => {
                               setPerfilId(perfil.id)
                               setOpenCombobox(false)
@@ -173,18 +180,26 @@ export function CreateInscripcionDialog({ className }: { className?: string }) {
                           >
                             <CheckIcon
                               className={cn(
-                                'mr-2 h-4 w-4',
+                                'mt-1 h-4 w-4 shrink-0',
                                 perfilId === perfil.id ? 'opacity-100' : 'opacity-0'
                               )}
                             />
-                            <div className="flex flex-col">
-                              <span>{perfil.nombre_completo}</span>
-                              <div className="mt-0.5 flex items-center gap-2">
+                            <div className="min-w-0 flex-1">
+                              <span className="block truncate text-sm font-medium text-foreground">
+                                {perfil.nombre_completo}
+                              </span>
+                              <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
                                 <span className="text-xs text-muted-foreground">
                                   DNI: {perfil.dni}
                                 </span>
                                 {perfil.rol !== 'Alumno' && (
-                                  <Badge variant="outline" className={cn('h-4 border-transparent px-1 py-0 text-[10px]', getRoleColor(perfil.rol))}>
+                                  <Badge
+                                    variant="outline"
+                                    className={cn(
+                                      'h-5 border-transparent px-1.5 py-0 text-[10px] leading-none',
+                                      getRoleColor(perfil.rol)
+                                    )}
+                                  >
                                     {perfil.rol}
                                   </Badge>
                                 )}
@@ -202,7 +217,9 @@ export function CreateInscripcionDialog({ className }: { className?: string }) {
             <div className="mt-2 grid gap-2">
               <Label htmlFor="monto">Monto Obligatorio</Label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 font-medium text-muted-foreground">S/</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 font-medium text-muted-foreground">
+                  S/
+                </span>
                 <Input
                   id="monto"
                   type="text"
@@ -212,19 +229,19 @@ export function CreateInscripcionDialog({ className }: { className?: string }) {
                 />
               </div>
               <p className="text-xs text-muted-foreground">
-                El precio de inscripciÃ³n estÃ¡ congelado por configuraciÃ³n.
+                El precio de inscripción esta congelado por configuración.
               </p>
             </div>
 
             <div className="mt-2 grid gap-2">
-              <Label htmlFor="metodo_pago">Tipo de OperaciÃ³n</Label>
+              <Label htmlFor="metodo_pago">Tipo de Operación</Label>
               <Select
                 value={metodoPago}
                 onValueChange={(value) => value && setMetodoPago(value)}
                 disabled={isSubmitting}
               >
                 <SelectTrigger id="metodo_pago">
-                  <SelectValue placeholder="Selecciona el mÃ©todo" />
+                  <SelectValue placeholder="Selecciona el metodo" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Efectivo">Billetes / Efectivo</SelectItem>
@@ -238,7 +255,12 @@ export function CreateInscripcionDialog({ className }: { className?: string }) {
           </div>
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => handleOpenChange(false)} disabled={isSubmitting}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => handleOpenChange(false)}
+              disabled={isSubmitting}
+            >
               Cancelar
             </Button>
             <Button type="submit" disabled={isSubmitting || !perfilId}>
@@ -248,7 +270,7 @@ export function CreateInscripcionDialog({ className }: { className?: string }) {
                   Registrando...
                 </>
               ) : (
-                'Finalizar InscripciÃ³n'
+                'Finalizar Inscripción'
               )}
             </Button>
           </DialogFooter>
