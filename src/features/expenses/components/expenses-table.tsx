@@ -1,7 +1,7 @@
 import { useState, useCallback, useMemo, lazy, Suspense } from 'react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { WalletIcon, BuildingIcon, PackageIcon, ClockIcon, Trash2Icon, PencilIcon, BanknoteIcon } from 'lucide-react'
+import { WalletIcon, BuildingIcon, PackageIcon, ClockIcon, Trash2Icon, PencilIcon, BanknoteIcon, HistoryIcon } from 'lucide-react'
 import { useSWRConfig } from 'swr'
 import { supabase } from '@/lib/supabase/client'
 import { getErrorMessage } from '@/lib/error-utils'
@@ -11,6 +11,7 @@ import { useExpenses, type EgresoRow, type EgresoWithAbonos } from '../api/use-e
 const CreateExpenseDialog = lazy(() => import('./create-expense-dialog').then(m => ({ default: m.CreateExpenseDialog })))
 const PayExpenseDialog = lazy(() => import('./pay-expense-dialog').then(m => ({ default: m.PayExpenseDialog })))
 const EditExpenseDialog = lazy(() => import('./edit-expense-dialog').then(m => ({ default: m.EditExpenseDialog })))
+const ManageExpensePaymentsDialog = lazy(() => import('./manage-expense-payments-dialog').then(m => ({ default: m.ManageExpensePaymentsDialog })))
 
 import {
   Card,
@@ -32,12 +33,6 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Progress } from '@/components/ui/progress'
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover'
-import { HistoryIcon } from 'lucide-react'
-import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -57,6 +52,7 @@ export function ExpensesTable() {
   const [activeTab, setActiveTab] = useState<CategoriaTab>('all')
   const [payingEgreso, setPayingEgreso] = useState<EgresoWithAbonos | null>(null)
   const [editingEgreso, setEditingEgreso] = useState<EgresoRow | null>(null)
+  const [managingPaymentsEgreso, setManagingPaymentsEgreso] = useState<EgresoWithAbonos | null>(null)
   const [egresoToDelete, setEgresoToDelete] = useState<EgresoRow | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
 
@@ -207,6 +203,7 @@ export function ExpensesTable() {
             const totalAbonado = egreso.abonos_egresos.reduce((acc, a) => acc + a.monto_abono, 0)
             const porcentaje = Math.min(Math.round((totalAbonado / egreso.monto) * 100), 100)
             const isFullyPaid = egreso.estado === 'Pagado' || totalAbonado >= egreso.monto
+            const hasPayments = totalAbonado > 0
 
             return (
               <div key={egreso.id} className="rounded-xl border bg-card p-4 space-y-3 shadow-sm">
@@ -245,8 +242,20 @@ export function ExpensesTable() {
                 </div>
 
                 {/* Actions */}
-                {!isFullyPaid && (
-                  <div className="flex items-center gap-2 pt-1 border-t border-border/40">
+                <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-border/40">
+                  {hasPayments && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 gap-1.5"
+                      onClick={() => setTimeout(() => setManagingPaymentsEgreso(egreso), 50)}
+                    >
+                      <HistoryIcon className="h-3.5 w-3.5" />
+                      Historial
+                    </Button>
+                  )}
+                  {!isFullyPaid && (
+                    <>
                     <Button
                       variant="ghost"
                       size="sm"
@@ -278,11 +287,12 @@ export function ExpensesTable() {
                     >
                       <Trash2Icon className="h-3.5 w-3.5" />
                     </Button>
-                  </div>
-                )}
-                {isFullyPaid && (
-                  <p className="text-xs text-muted-foreground italic pt-1 border-t border-border/40">Gasto finalizado</p>
-                )}
+                    </>
+                  )}
+                  {isFullyPaid && (
+                    <p className="text-xs text-muted-foreground italic">Puedes corregir pagos desde el historial.</p>
+                  )}
+                </div>
               </div>
             )
           })
@@ -299,7 +309,7 @@ export function ExpensesTable() {
               <TableHead className="w-[120px] text-right">Monto</TableHead>
               <TableHead className="w-[130px]">Fecha Prog.</TableHead>
               <TableHead className="w-[100px] text-center">Estado</TableHead>
-              <TableHead className="w-[140px] text-right">Acciones</TableHead>
+              <TableHead className="w-[220px] text-right">Acciones</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -325,6 +335,7 @@ export function ExpensesTable() {
                 const totalAbonado = egreso.abonos_egresos.reduce((acc, a) => acc + a.monto_abono, 0)
                 const porcentaje = Math.min(Math.round((totalAbonado / egreso.monto) * 100), 100)
                 const isFullyPaid = egreso.estado === 'Pagado' || totalAbonado >= egreso.monto
+                const hasPayments = totalAbonado > 0
 
                 return (
                   <TableRow key={egreso.id}>
@@ -351,35 +362,6 @@ export function ExpensesTable() {
                     <TableCell className="text-right">
                       <div className="flex flex-col items-end gap-1.5">
                         <div className="flex items-center gap-2">
-                          {totalAbonado > 0 && (
-                            <Popover>
-                              <PopoverTrigger
-                                render={
-                                  <Button variant="ghost" size="icon" className="h-4 w-4 text-muted-foreground hover:text-primary">
-                                    <HistoryIcon className="h-3 w-3" />
-                                  </Button>
-                                }
-                              />
-                              <PopoverContent className="w-60 p-3" align="end">
-                                <h4 className="text-xs font-semibold mb-2 flex items-center gap-1.5 text-foreground">
-                                  <HistoryIcon className="h-3.5 w-3.5" />
-                                  Historial de Abonos
-                                </h4>
-                                <div className="space-y-2">
-                                  {(egreso.abonos_egresos ?? []).sort((a,b) => new Date(b.fecha_pago).getTime() - new Date(a.fecha_pago).getTime()).map((abono) => (
-                                    <div key={abono.id} className="flex justify-between items-center text-[10px] border-b border-border/40 pb-1 last:border-0 last:pb-0">
-                                      <span className="text-muted-foreground">
-                                        {format(new Date(abono.fecha_pago), 'dd/MM/yy HH:mm')}
-                                      </span>
-                                      <span className="font-medium text-emerald-600">
-                                        + S/ {abono.monto_abono.toFixed(2)}
-                                      </span>
-                                    </div>
-                                  ))}
-                                </div>
-                              </PopoverContent>
-                            </Popover>
-                          )}
                           <span className="font-semibold tabular-nums">
                             S/ {egreso.monto.toFixed(2)}
                           </span>
@@ -417,6 +399,17 @@ export function ExpensesTable() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
+                        {hasPayments && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 gap-1 text-muted-foreground hover:text-foreground"
+                            onClick={() => setTimeout(() => setManagingPaymentsEgreso(egreso), 50)}
+                          >
+                            <HistoryIcon className="h-3.5 w-3.5" />
+                            Historial
+                          </Button>
+                        )}
                         {!isFullyPaid && (
                           <>
                             <Button
@@ -452,7 +445,7 @@ export function ExpensesTable() {
                             </Button>
                           </>
                         )}
-                        {isFullyPaid && (
+                        {isFullyPaid && !hasPayments && (
                           <span className="text-[10px] text-muted-foreground italic px-2">
                             Gasto finalizado
                           </span>
@@ -479,6 +472,12 @@ export function ExpensesTable() {
           open={editingEgreso !== null}
           onOpenChange={(isOpen) => { if (!isOpen) setEditingEgreso(null) }}
           egreso={editingEgreso}
+        />
+
+        <ManageExpensePaymentsDialog
+          open={managingPaymentsEgreso !== null}
+          onOpenChange={(isOpen) => { if (!isOpen) setManagingPaymentsEgreso(null) }}
+          egreso={managingPaymentsEgreso}
         />
       </Suspense>
 

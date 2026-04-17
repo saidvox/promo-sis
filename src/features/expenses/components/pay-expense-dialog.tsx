@@ -77,16 +77,15 @@ export function PayExpenseDialog({ open, onOpenChange, egreso, saldoDisponible }
 
       if (abonoError) throw abonoError
 
-      // 2. Si el nuevo total cubierto es el 100%, marcar como Pagado
+      // 2. Recalcular el estado del egreso con cada movimiento registrado
       const nuevoTotalPagado = pagadoAcumulado + montoAbonoNum
-      if (nuevoTotalPagado >= egreso.monto) {
-        const { error: statusError } = await supabase
-          .from('egresos')
-          .update({ estado: 'Pagado', updated_at: new Date().toISOString() })
-          .eq('id', egreso.id)
-        
-        if (statusError) throw statusError
-      }
+      const nuevoEstado = nuevoTotalPagado >= egreso.monto ? 'Pagado' : 'Pendiente'
+      const { error: statusError } = await supabase
+        .from('egresos')
+        .update({ estado: nuevoEstado, updated_at: new Date().toISOString() })
+        .eq('id', egreso.id)
+
+      if (statusError) throw statusError
 
       toast.success(nuevoTotalPagado >= egreso.monto ? 'Egreso liquidado por completo' : 'Abono registrado correctamente')
       mutate('api/expenses')
