@@ -94,6 +94,8 @@ export function CreateInscripcionDialog({ className }: { className?: string }) {
       mutate('api/inscripciones')
       mutate('api/payments-matrix')
       mutate('api/students')
+      mutate('api/dashboard-stats')
+      mutate('api/expenses')
 
       handleOpenChange(false)
     } catch (error: unknown) {

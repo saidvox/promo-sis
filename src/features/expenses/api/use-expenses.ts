@@ -29,7 +29,7 @@ export type ExpenseStats = {
  */
 export const useExpenses = () => {
   const fetcher = async () => {
-    const [egresosRes, pagosRes, inscripcionesRes] = await Promise.all([
+    const [egresosRes, pagosRes, inscripcionesRes, actividadesRes] = await Promise.all([
       supabase
         .from('egresos')
         .select('*, abonos_egresos(*)')
@@ -37,21 +37,26 @@ export const useExpenses = () => {
       supabase
         .from('pagos')
         .select('monto_pagado')
-        .eq('estado', 'Pagado'),
+        .neq('estado', 'Rechazado'),
       supabase
         .from('inscripciones')
         .select('monto'),
+      supabase
+        .from('actividades')
+        .select('monto_recaudado')
     ])
 
     if (egresosRes.error) throw egresosRes.error
     if (pagosRes.error) throw pagosRes.error
     if (inscripcionesRes.error) throw inscripcionesRes.error
+    if (actividadesRes.error) throw actividadesRes.error
 
     const egresos = egresosRes.data as EgresoWithAbonos[]
     
     const totalIngresos = 
       pagosRes.data.reduce((acc, p) => acc + p.monto_pagado, 0) +
-      inscripcionesRes.data.reduce((acc, i) => acc + i.monto, 0)
+      inscripcionesRes.data.reduce((acc, i) => acc + i.monto, 0) +
+      actividadesRes.data.reduce((acc, a) => acc + Number(a.monto_recaudado), 0)
 
     // El "Total Gastado" es la suma de TODOS los abonos efectivamente realizados
     let totalAbonadoAcumulado = 0

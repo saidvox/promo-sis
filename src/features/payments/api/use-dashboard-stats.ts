@@ -23,7 +23,7 @@ export const useDashboardStats = () => {
   const fetcher = async (): Promise<DashboardStats> => {
     // Disparo PARALELO de todas las queries necesarias
     const [pagosRes, egresosRes, inscripcionesRes, cuotasRes, allPagosRes, inscritosRes] = await Promise.all([
-      supabase.from('pagos').select('monto_pagado').eq('estado', 'Pagado'),
+      supabase.from('pagos').select('monto_pagado').neq('estado', 'Rechazado'),
       supabase.from('egresos').select('monto, estado'),
       supabase.from('inscripciones').select('monto'),
       supabase.from('config_cuotas').select('id, monto').eq('activo', true),

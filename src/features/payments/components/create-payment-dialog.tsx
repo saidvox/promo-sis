@@ -110,6 +110,8 @@ export function CreatePaymentDialog({
 
       toast.success('Abono registrado correctamente')
       mutate('api/payments-matrix') // Forzar refetch local
+      mutate('api/dashboard-stats')
+      mutate('api/expenses')
       onOpenChange(false)
     } catch (error: any) {
       toast.error(error.message || 'Error al registrar el abono')

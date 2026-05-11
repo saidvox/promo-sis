@@ -17,11 +17,7 @@ import {
 import { LayoutDashboardIcon, UsersIcon, BanknoteIcon, TrendingDownIcon, SparklesIcon, Settings2Icon, CommandIcon } from "lucide-react"
 
 const data = {
-  user: {
-    name: "Admin",
-    email: "admin@example.com",
-    avatar: "",
-  },
+
   navMain: [
     {
       title: "Dashboard",
@@ -47,7 +43,6 @@ const data = {
       title: "Actividades",
       url: "activities",
       icon: <SparklesIcon />,
-      badge: "Próximamente",
     },
     {
       title: "Configuración Cuotas",
@@ -59,11 +54,11 @@ const data = {
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { session, profile } = useAuth()
 
-  const userData = profile ? {
-    name: profile.nombre_completo || "Administrador",
-    email: session?.user?.email || "",
-    avatar: profile.avatar_url || "",
-  } : data.user
+  const userData = {
+    name: profile?.nombre_completo || "Usuario",
+    email: session?.user?.email || "Cargando...",
+    avatar: profile?.avatar_url || "",
+  }
 
   return (
     <Sidebar variant="inset" collapsible="icon" {...props}>

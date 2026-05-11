@@ -1,5 +1,4 @@
 import { useEffect } from 'react'
-import { SparklesIcon } from 'lucide-react'
 import { SWRConfig } from 'swr'
 import { AuthProvider } from '@/components/auth-provider'
 import { AppSidebar } from '@/components/app-sidebar'
@@ -16,6 +15,7 @@ import { LoginPage } from '@/pages/login-page'
 import { PaymentsPage } from '@/pages/payments-page'
 import { SettingsPage } from '@/pages/settings-page'
 import { StudentsPage } from '@/pages/students-page'
+import { ActivitiesPage } from '@/pages/activities-page'
 
 const PAGE_TITLES = {
   dashboard: 'Dashboard Principal',
@@ -50,20 +50,7 @@ function MainContent() {
         {currentPage === 'students' && <StudentsPage />}
         {currentPage === 'payments' && <PaymentsPage />}
         {currentPage === 'expenses' && <ExpensesPage />}
-        {currentPage === 'activities' && (
-          <div className="flex flex-1 items-center justify-center p-4">
-            <div className="text-center space-y-4">
-              <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-primary/10 ring-1 ring-primary/20">
-                <SparklesIcon className="h-10 w-10 animate-pulse text-primary" />
-              </div>
-              <h2 className="text-2xl font-bold tracking-tight">Proximamente</h2>
-              <p className="mx-auto max-w-xs text-muted-foreground">
-                Estamos preparando este modulo para gestionar actividades de
-                recaudacion adicionales (rifas, eventos, etc).
-              </p>
-            </div>
-          </div>
-        )}
+        {currentPage === 'activities' && <ActivitiesPage />}
         {currentPage === 'settings' && <SettingsPage />}
       </SidebarInset>
     </SidebarProvider>

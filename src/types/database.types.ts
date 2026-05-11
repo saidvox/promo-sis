@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      actividades: {
+        Row: {
+          created_at: string | null
+          descripcion: string | null
+          estado: string
+          fecha_evento: string
+          id: string
+          monto_recaudado: number
+          nombre: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          descripcion?: string | null
+          estado?: string
+          fecha_evento: string
+          id?: string
+          monto_recaudado?: number
+          nombre: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          descripcion?: string | null
+          estado?: string
+          fecha_evento?: string
+          id?: string
+          monto_recaudado?: number
+          nombre?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       abonos_egresos: {
         Row: {
           created_at: string
