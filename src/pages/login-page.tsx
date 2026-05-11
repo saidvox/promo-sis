@@ -20,7 +20,7 @@ export function LoginPage() {
 
     setIsLoading(true)
     const { error } = await supabase.auth.signInWithPassword({
-      email,
+      email: email.trim(),
       password,
     })
 
