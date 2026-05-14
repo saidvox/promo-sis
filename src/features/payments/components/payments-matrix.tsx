@@ -1,11 +1,13 @@
 import { useState, useCallback, useMemo, lazy, Suspense } from 'react'
-import { Loader2Icon, ShieldAlertIcon, SearchIcon, ChevronLeftIcon, ChevronRightIcon } from 'lucide-react'
+import { DownloadIcon, Loader2Icon, ShieldAlertIcon, SearchIcon, ChevronLeftIcon, ChevronRightIcon } from 'lucide-react'
 import { usePaymentsMatrix, MESES_DEL_ANO } from '../api/use-payments-matrix'
 import { PaymentMatrixCell } from './payment-matrix-cell'
+import { exportPaymentsExcel } from '../utils/export-payments-excel'
 const CreatePaymentDialog = lazy(() => import('./create-payment-dialog').then(m => ({ default: m.CreatePaymentDialog })))
 const CreateInscripcionDialog = lazy(() => import('./create-inscripcion-dialog').then(m => ({ default: m.CreateInscripcionDialog })))
 import { getRoleColor } from '@/features/students/utils/get-role-color'
 import { cn } from '@/lib/utils'
+import { toast } from 'sonner'
 
 import {
   Table,
@@ -32,6 +34,7 @@ export function PaymentsMatrix() {
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<FilterStatus>('all')
   const [currentPage, setCurrentPage] = useState(1)
+  const [isExporting, setIsExporting] = useState(false)
 
   const handleCellClick = useCallback((perfilId: string, cuotaId: string) => {
     // Evitamos el bug de Focus Trap entre DropdownMenu y Dialog usando un microtask (setTimeout)
@@ -43,6 +46,21 @@ export function PaymentsMatrix() {
   const handleDialogOpenChange = useCallback((isOpen: boolean) => {
     if (!isOpen) setActiveCell(null)
   }, [])
+
+  const handleExportExcel = useCallback(async () => {
+    if (!data) return
+
+    setIsExporting(true)
+    try {
+      await exportPaymentsExcel(data)
+      toast.success('Excel descargado correctamente')
+    } catch (error) {
+      console.error('Error exporting payments report:', error)
+      toast.error('No se pudo generar el Excel')
+    } finally {
+      setIsExporting(false)
+    }
+  }, [data])
 
   // ----------------------------------------------------
   // COMPUTATIONAL PIPELINE (Memoized for max performance)
@@ -164,7 +182,7 @@ export function PaymentsMatrix() {
     )
   }
 
-  const { cuotasPorMes, pagosMap, perfilesInscritos } = data
+  const { cuotasPorMes, pagosMap, paymentMovementsMap, perfilesInscritos } = data
   const { paginatedList, totalList, totalPages, safePage } = filteredAndPaginated
 
   return (
@@ -201,7 +219,23 @@ export function PaymentsMatrix() {
           </div>
         </div>
 
-        <CreateInscripcionDialog className="w-full lg:w-auto" />
+        <div className="flex flex-col gap-2 sm:flex-row lg:w-auto">
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full gap-2 lg:w-auto"
+            onClick={handleExportExcel}
+            disabled={isExporting || perfilesInscritos.length === 0}
+          >
+            {isExporting ? (
+              <Loader2Icon className="h-4 w-4 animate-spin" />
+            ) : (
+              <DownloadIcon className="h-4 w-4" />
+            )}
+            Descargar Excel
+          </Button>
+          <CreateInscripcionDialog className="w-full lg:w-auto" />
+        </div>
       </div>
 
       {/* MATRIX */}
@@ -329,6 +363,7 @@ export function PaymentsMatrix() {
                           perfilId={perfil.id}
                           cuotaId={cuota.id}
                           pago={pagoAsociado}
+                          movements={paymentMovementsMap[mapKey] ?? []}
                           onCellClick={handleCellClick}
                         />
                       </TableCell>

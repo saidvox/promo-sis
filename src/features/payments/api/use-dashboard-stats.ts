@@ -1,8 +1,5 @@
 import useSWR from 'swr'
 import { supabase } from '@/lib/supabase/client'
-import type { Database } from '@/types/database.types'
-
-type EgresoStatsRow = Pick<Database['public']['Tables']['egresos']['Row'], 'monto' | 'estado'>
 
 export type DashboardStats = {
   totalIncome: number
@@ -22,13 +19,24 @@ export type DashboardStats = {
 export const useDashboardStats = () => {
   const fetcher = async (): Promise<DashboardStats> => {
     // Disparo PARALELO de todas las queries necesarias
-    const [pagosRes, egresosRes, inscripcionesRes, cuotasRes, allPagosRes, inscritosRes] = await Promise.all([
+    const [
+      pagosRes, 
+      egresosRes, 
+      inscripcionesRes, 
+      cuotasRes, 
+      allPagosRes, 
+      inscritosRes,
+      actividadesRes,
+      abonosRes
+    ] = await Promise.all([
       supabase.from('pagos').select('monto_pagado').neq('estado', 'Rechazado'),
       supabase.from('egresos').select('monto, estado'),
       supabase.from('inscripciones').select('monto'),
       supabase.from('config_cuotas').select('id, monto').eq('activo', true),
       supabase.from('pagos').select('perfil_id, cuota_id, monto_pagado'),
       supabase.from('inscripciones').select('perfil_id'),
+      supabase.from('actividades').select('monto_recaudado'),
+      supabase.from('abonos_egresos').select('monto_abono'),
     ])
 
     if (pagosRes.error) throw pagosRes.error
@@ -37,13 +45,17 @@ export const useDashboardStats = () => {
     if (cuotasRes.error) throw cuotasRes.error
     if (allPagosRes.error) throw allPagosRes.error
     if (inscritosRes.error) throw inscritosRes.error
+    if (actividadesRes.error) throw actividadesRes.error
+    if (abonosRes.error) throw abonosRes.error
 
     const totalPagos = pagosRes.data.reduce((acc, cur) => acc + cur.monto_pagado, 0)
     const totalInscripciones = inscripcionesRes.data.reduce((acc, cur) => acc + cur.monto, 0)
-    const totalIncome = totalPagos + totalInscripciones
-    const totalExpenses = (egresosRes.data as EgresoStatsRow[])
-      .filter((egreso) => egreso.estado === 'Pagado')
-      .reduce((acc, cur) => acc + cur.monto, 0)
+    const totalActividades = actividadesRes.data.reduce((acc, cur) => acc + Number(cur.monto_recaudado), 0)
+    
+    const totalIncome = totalPagos + totalInscripciones + totalActividades
+    
+    // El gasto real es la suma de todos los abonos realizados
+    const totalExpenses = abonosRes.data.reduce((acc, cur) => acc + cur.monto_abono, 0)
 
     // Evaluar deudores reales desde la Matriz:
     // Un alumno tiene deuda si existe al menos 1 cuota activa que NO pagó completamente

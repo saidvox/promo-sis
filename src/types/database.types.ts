@@ -19,33 +19,193 @@ export type Database = {
           created_at: string | null
           descripcion: string | null
           estado: string
+          etiqueta_unidad: string
           fecha_evento: string
           id: string
+          minimo_unidades_beneficio: number
+          monto_beneficio_unitario: number
+          monto_promocion_unitario: number
           monto_recaudado: number
           nombre: string
+          precio_unitario: number
+          tipo_actividad: string
+          total_beneficio: number
+          total_bruto: number
+          total_premios_externos: number
+          total_promocion: number
+          usa_grupos: boolean
+          usa_premios: boolean
           updated_at: string | null
         }
         Insert: {
           created_at?: string | null
           descripcion?: string | null
           estado?: string
+          etiqueta_unidad?: string
           fecha_evento: string
           id?: string
+          minimo_unidades_beneficio?: number
+          monto_beneficio_unitario?: number
+          monto_promocion_unitario?: number
           monto_recaudado?: number
           nombre: string
+          precio_unitario?: number
+          tipo_actividad?: string
+          total_beneficio?: number
+          total_bruto?: number
+          total_premios_externos?: number
+          total_promocion?: number
+          usa_grupos?: boolean
+          usa_premios?: boolean
           updated_at?: string | null
         }
         Update: {
           created_at?: string | null
           descripcion?: string | null
           estado?: string
+          etiqueta_unidad?: string
           fecha_evento?: string
           id?: string
+          minimo_unidades_beneficio?: number
+          monto_beneficio_unitario?: number
+          monto_promocion_unitario?: number
           monto_recaudado?: number
           nombre?: string
+          precio_unitario?: number
+          tipo_actividad?: string
+          total_beneficio?: number
+          total_bruto?: number
+          total_premios_externos?: number
+          total_promocion?: number
+          usa_grupos?: boolean
+          usa_premios?: boolean
           updated_at?: string | null
         }
         Relationships: []
+      }
+      actividad_grupos: {
+        Row: {
+          actividad_id: string
+          costo_premio: number
+          created_at: string
+          id: string
+          nombre: string
+          notas: string | null
+          premio: string | null
+          updated_at: string
+        }
+        Insert: {
+          actividad_id: string
+          costo_premio?: number
+          created_at?: string
+          id?: string
+          nombre: string
+          notas?: string | null
+          premio?: string | null
+          updated_at?: string
+        }
+        Update: {
+          actividad_id?: string
+          costo_premio?: number
+          created_at?: string
+          id?: string
+          nombre?: string
+          notas?: string | null
+          premio?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "actividad_grupos_actividad_id_fkey"
+            columns: ["actividad_id"]
+            isOneToOne: false
+            referencedRelation: "actividades"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      actividad_participantes: {
+        Row: {
+          actividad_id: string
+          aporte_premio: number
+          created_at: string
+          cuota_id: string | null
+          grupo_id: string | null
+          id: string
+          monto_beneficio: number
+          monto_beneficio_aplicado: number
+          monto_beneficio_pendiente: number
+          monto_bruto: number
+          monto_promocion: number
+          notas: string | null
+          perfil_id: string
+          unidades_vendidas: number
+          updated_at: string
+        }
+        Insert: {
+          actividad_id: string
+          aporte_premio?: number
+          created_at?: string
+          cuota_id?: string | null
+          grupo_id?: string | null
+          id?: string
+          monto_beneficio?: number
+          monto_beneficio_aplicado?: number
+          monto_beneficio_pendiente?: number
+          monto_bruto?: number
+          monto_promocion?: number
+          notas?: string | null
+          perfil_id: string
+          unidades_vendidas?: number
+          updated_at?: string
+        }
+        Update: {
+          actividad_id?: string
+          aporte_premio?: number
+          created_at?: string
+          cuota_id?: string | null
+          grupo_id?: string | null
+          id?: string
+          monto_beneficio?: number
+          monto_beneficio_aplicado?: number
+          monto_beneficio_pendiente?: number
+          monto_bruto?: number
+          monto_promocion?: number
+          notas?: string | null
+          perfil_id?: string
+          unidades_vendidas?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "actividad_participantes_actividad_id_fkey"
+            columns: ["actividad_id"]
+            isOneToOne: false
+            referencedRelation: "actividades"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "actividad_participantes_cuota_id_fkey"
+            columns: ["cuota_id"]
+            isOneToOne: false
+            referencedRelation: "config_cuotas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "actividad_participantes_grupo_id_fkey"
+            columns: ["grupo_id"]
+            isOneToOne: false
+            referencedRelation: "actividad_grupos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "actividad_participantes_perfil_id_fkey"
+            columns: ["perfil_id"]
+            isOneToOne: false
+            referencedRelation: "perfiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       abonos_egresos: {
         Row: {
@@ -111,6 +271,8 @@ export type Database = {
       }
       egresos: {
         Row: {
+          actividad_grupo_id: string | null
+          actividad_id: string | null
           categoria: string
           concepto: string
           created_at: string | null
@@ -123,6 +285,8 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          actividad_grupo_id?: string | null
+          actividad_id?: string | null
           categoria?: string
           concepto: string
           created_at?: string | null
@@ -135,6 +299,8 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          actividad_grupo_id?: string | null
+          actividad_id?: string | null
           categoria?: string
           concepto?: string
           created_at?: string | null
@@ -147,6 +313,20 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "egresos_actividad_grupo_id_fkey"
+            columns: ["actividad_grupo_id"]
+            isOneToOne: false
+            referencedRelation: "actividad_grupos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "egresos_actividad_id_fkey"
+            columns: ["actividad_id"]
+            isOneToOne: false
+            referencedRelation: "actividades"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "egresos_perfil_id_fkey"
             columns: ["perfil_id"]
@@ -232,6 +412,81 @@ export type Database = {
           },
           {
             foreignKeyName: "pagos_perfil_id_fkey"
+            columns: ["perfil_id"]
+            isOneToOne: false
+            referencedRelation: "perfiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pago_movimientos: {
+        Row: {
+          actividad_id: string | null
+          actividad_participante_id: string | null
+          created_at: string
+          cuota_id: string
+          id: string
+          monto: number
+          nota: string | null
+          origen: string
+          pago_id: string | null
+          perfil_id: string
+        }
+        Insert: {
+          actividad_id?: string | null
+          actividad_participante_id?: string | null
+          created_at?: string
+          cuota_id: string
+          id?: string
+          monto: number
+          nota?: string | null
+          origen?: string
+          pago_id?: string | null
+          perfil_id: string
+        }
+        Update: {
+          actividad_id?: string | null
+          actividad_participante_id?: string | null
+          created_at?: string
+          cuota_id?: string
+          id?: string
+          monto?: number
+          nota?: string | null
+          origen?: string
+          pago_id?: string | null
+          perfil_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pago_movimientos_actividad_id_fkey"
+            columns: ["actividad_id"]
+            isOneToOne: false
+            referencedRelation: "actividades"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pago_movimientos_actividad_participante_id_fkey"
+            columns: ["actividad_participante_id"]
+            isOneToOne: false
+            referencedRelation: "actividad_participantes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pago_movimientos_cuota_id_fkey"
+            columns: ["cuota_id"]
+            isOneToOne: false
+            referencedRelation: "config_cuotas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pago_movimientos_pago_id_fkey"
+            columns: ["pago_id"]
+            isOneToOne: false
+            referencedRelation: "pagos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pago_movimientos_perfil_id_fkey"
             columns: ["perfil_id"]
             isOneToOne: false
             referencedRelation: "perfiles"

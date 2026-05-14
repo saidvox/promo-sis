@@ -5,6 +5,8 @@ import type { Database } from '@/types/database.types'
 export type ActividadRow = Database['public']['Tables']['actividades']['Row']
 export type ActividadInsert = Database['public']['Tables']['actividades']['Insert']
 export type ActividadUpdate = Database['public']['Tables']['actividades']['Update']
+export type ActividadGrupoRow = Database['public']['Tables']['actividad_grupos']['Row']
+export type ActividadParticipanteRow = Database['public']['Tables']['actividad_participantes']['Row']
 
 export type ActivityStats = {
   totalRecaudado: number
@@ -85,6 +87,78 @@ export const useActivities = () => {
     await mutate()
   }
 
+  const revertActivity = async (id: string) => {
+    const movimientosRes = await supabase
+      .from('pago_movimientos')
+      .select('id, pago_id, monto')
+      .eq('actividad_id', id)
+      .eq('origen', 'beneficio_actividad')
+
+    if (movimientosRes.error) throw movimientosRes.error
+
+    for (const movimiento of movimientosRes.data ?? []) {
+      if (!movimiento.pago_id) continue
+
+      const pagoRes = await supabase
+        .from('pagos')
+        .select('id, monto_pagado, config_cuotas(monto)')
+        .eq('id', movimiento.pago_id)
+        .single()
+
+      if (pagoRes.error) throw pagoRes.error
+
+      const cuota = Array.isArray(pagoRes.data.config_cuotas)
+        ? pagoRes.data.config_cuotas[0]
+        : pagoRes.data.config_cuotas
+      const nextAmount = Math.max(0, Number(pagoRes.data.monto_pagado) - Number(movimiento.monto))
+      const nextState = nextAmount >= Number(cuota?.monto ?? 0) ? 'Pagado' : 'Pendiente'
+
+      if (nextAmount <= 0) {
+        const { error } = await supabase.from('pagos').delete().eq('id', movimiento.pago_id)
+        if (error) throw error
+      } else {
+        const { error } = await supabase
+          .from('pagos')
+          .update({
+            monto_pagado: nextAmount,
+            estado: nextState,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', movimiento.pago_id)
+
+        if (error) throw error
+      }
+    }
+
+    const deleteMovementsRes = await supabase
+      .from('pago_movimientos')
+      .delete()
+      .eq('actividad_id', id)
+      .eq('origen', 'beneficio_actividad')
+
+    if (deleteMovementsRes.error) throw deleteMovementsRes.error
+
+    const resetParticipantsRes = await supabase
+      .from('actividad_participantes')
+      .update({
+        monto_beneficio_aplicado: 0,
+        monto_beneficio_pendiente: 0,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('actividad_id', id)
+
+    if (resetParticipantsRes.error) throw resetParticipantsRes.error
+
+    await updateActivity(id, {
+      estado: 'En curso',
+      monto_recaudado: 0,
+      total_bruto: 0,
+      total_promocion: 0,
+      total_beneficio: 0,
+      total_premios_externos: 0,
+    })
+  }
+
   return { 
     data, 
     error, 
@@ -92,6 +166,7 @@ export const useActivities = () => {
     mutate,
     createActivity,
     updateActivity,
-    deleteActivity
+    deleteActivity,
+    revertActivity
   }
 }

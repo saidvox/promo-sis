@@ -14,6 +14,8 @@ export type AbonoRow = {
 
 export type EgresoWithAbonos = EgresoRow & {
   abonos_egresos: AbonoRow[]
+  actividades?: { nombre: string } | null
+  actividad_grupos?: { nombre: string } | null
 }
 
 export type ExpenseStats = {
@@ -32,7 +34,7 @@ export const useExpenses = () => {
     const [egresosRes, pagosRes, inscripcionesRes, actividadesRes] = await Promise.all([
       supabase
         .from('egresos')
-        .select('*, abonos_egresos(*)')
+        .select('*, abonos_egresos(*), actividades(nombre), actividad_grupos(nombre)')
         .order('created_at', { ascending: false }),
       supabase
         .from('pagos')

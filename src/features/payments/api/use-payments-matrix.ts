@@ -7,6 +7,10 @@ type CuotaRow = Pick<Database['public']['Tables']['config_cuotas']['Row'], 'id' 
 type PagoRow = Database['public']['Tables']['pagos']['Row']
 type InscripcionLiteRow = Pick<Database['public']['Tables']['inscripciones']['Row'], 'perfil_id' | 'monto'>
 
+export type PaymentMovement = Database['public']['Tables']['pago_movimientos']['Row'] & {
+  actividades?: { nombre: string } | null
+}
+
 export const MESES_DEL_ANO = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 
   'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
@@ -20,6 +24,7 @@ export type MatrixData = {
   cuotasPorMes: Record<string, CuotaRow> 
   // js-index-maps: Hash Map O(1) cruzando perfilId-cuotaId
   pagosMap: Record<string, PagoRow> 
+  paymentMovementsMap: Record<string, PaymentMovement[]>
   // js-index-maps: Mapa de inscripciones (perfilId -> monto) para tratar Enero como Inscripción
   inscripcionesMap: Record<string, number>
 }
@@ -32,7 +37,7 @@ export type MatrixData = {
  */
 export const usePaymentsMatrix = () => {
   const fetcher = async (): Promise<MatrixData> => {
-    const [perfilesResult, inscripcionesResult, cuotasResult, pagosResult] = await Promise.all([
+    const [perfilesResult, inscripcionesResult, cuotasResult, pagosResult, movementsResult] = await Promise.all([
       supabase
         .from('perfiles')
         .select('id, nombre_completo, dni, rol, codigo_u')
@@ -49,13 +54,19 @@ export const usePaymentsMatrix = () => {
 
       supabase
         .from('pagos')
-        .select('*')
+        .select('*'),
+
+      supabase
+        .from('pago_movimientos')
+        .select('*, actividades(nombre)')
+        .order('created_at', { ascending: true })
     ])
 
     if (perfilesResult.error) throw perfilesResult.error
     if (inscripcionesResult.error) throw inscripcionesResult.error
     if (cuotasResult.error) throw cuotasResult.error
     if (pagosResult.error) throw pagosResult.error
+    if (movementsResult.error) throw movementsResult.error
 
     // Ahora consideramos A TODOS los perfiles, para tener una matriz total
     const perfilesInscritos = perfilesResult.data as PerfilRow[]
@@ -63,6 +74,7 @@ export const usePaymentsMatrix = () => {
     const inscripciones = (inscripcionesResult.data ?? []) as InscripcionLiteRow[]
     const cuotasArray = cuotasResult.data as CuotaRow[]
     const pagosArray = pagosResult.data as PagoRow[]
+    const movementsArray = (movementsResult.data ?? []) as PaymentMovement[]
 
     // Construir diccionarios
     const cuotasPorMes: Record<string, CuotaRow> = {}
@@ -79,6 +91,14 @@ export const usePaymentsMatrix = () => {
       }
     }
 
+    const paymentMovementsMap: Record<string, PaymentMovement[]> = {}
+    for (const movement of movementsArray) {
+      if (movement.perfil_id && movement.cuota_id) {
+        const key = `${movement.perfil_id}-${movement.cuota_id}`
+        paymentMovementsMap[key] = [...(paymentMovementsMap[key] ?? []), movement]
+      }
+    }
+
     const inscripcionesMap: Record<string, number> = {}
     for (const i of inscripciones) {
       if (i.perfil_id) {
@@ -87,7 +107,7 @@ export const usePaymentsMatrix = () => {
       }
     }
 
-    return { perfilesInscritos, cuotasPorMes, pagosMap, inscripcionesMap }
+    return { perfilesInscritos, cuotasPorMes, pagosMap, paymentMovementsMap, inscripcionesMap }
   }
 
   const { data, error, isLoading, mutate } = useSWR<MatrixData, Error>(

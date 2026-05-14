@@ -1,7 +1,7 @@
 import { useState, useCallback, lazy, Suspense } from 'react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { Trash2Icon, PencilIcon, DollarSignIcon, PlayIcon, CheckIcon, UndoIcon } from 'lucide-react'
+import { Trash2Icon, PencilIcon, DollarSignIcon, PlayIcon, EyeIcon, UndoIcon, UsersIcon } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { useActivities, type ActividadRow } from '../api/use-activities'
@@ -35,7 +35,7 @@ const EditActivityDialog = lazy(() => import('./edit-activity-dialog').then(m =>
 const FinalizeActivityDialog = lazy(() => import('./finalize-activity-dialog').then(m => ({ default: m.FinalizeActivityDialog as React.ComponentType<{ open: boolean; onOpenChange: (open: boolean) => void; activity: ActividadRow }> })))
 
 export function ActivitiesTable() {
-  const { data, isLoading, error, deleteActivity, updateActivity } = useActivities()
+  const { data, isLoading, error, deleteActivity, updateActivity, revertActivity } = useActivities()
   const { mutate } = useSWRConfig()
 
   const [editingActivity, setEditingActivity] = useState<ActividadRow | null>(null)
@@ -59,10 +59,11 @@ export function ActivitiesTable() {
   const handleRevertActivity = async (id: string) => {
     setIsUpdating(id)
     try {
-      await updateActivity(id, { estado: 'En curso', monto_recaudado: 0 })
-      toast.success('Actividad revertida a "En curso"')
+      await revertActivity(id)
+      toast.success('Actividad revertida y beneficios descontados')
       mutate('api/dashboard-stats')
       mutate('api/expenses')
+      mutate('api/payments-matrix')
     } catch (e) {
       toast.error('Error al revertir la actividad')
     } finally {
@@ -146,6 +147,13 @@ export function ActivitiesTable() {
                   {act.descripcion && (
                     <p className="text-xs text-muted-foreground line-clamp-1">{act.descripcion}</p>
                   )}
+                  {(act.usa_grupos || act.usa_premios) && (
+                    <div className="flex items-center gap-1 pt-1 text-[10px] text-muted-foreground">
+                      <UsersIcon className="h-3 w-3" />
+                      {act.usa_grupos ? 'Con grupos' : 'Sin grupos'}
+                      {act.usa_premios ? ' · premios externos' : ''}
+                    </div>
+                  )}
                   <p className="text-[10px] text-muted-foreground pt-1">
                     {format(new Date(act.fecha_evento + 'T00:00:00'), 'd MMM yyyy', { locale: es })}
                   </p>
@@ -169,6 +177,11 @@ export function ActivitiesTable() {
                 <span className="font-bold text-sm tabular-nums text-emerald-600 dark:text-emerald-400">
                   + S/ {act.monto_recaudado.toFixed(2)}
                 </span>
+                {act.total_beneficio > 0 && (
+                  <span className="text-[10px] font-medium text-blue-600">
+                    Beneficio S/ {Number(act.total_beneficio).toFixed(2)}
+                  </span>
+                )}
                 <div className="flex gap-1">
                   {act.estado === 'Planeada' && (
                     <Button
@@ -189,8 +202,8 @@ export function ActivitiesTable() {
                       className="h-8 gap-1.5 bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100 hover:text-emerald-700 dark:bg-emerald-950 dark:border-emerald-800 dark:hover:bg-emerald-900"
                       onClick={() => setFinalizingActivity(act)}
                     >
-                      <CheckIcon className="h-3.5 w-3.5 shrink-0" />
-                      <span className="leading-none mt-[1px]">Finalizar</span>
+                      <EyeIcon className="h-3.5 w-3.5 shrink-0" />
+                      <span className="leading-none mt-[1px]">Ver detalles</span>
                     </Button>
                   )}
                   {act.estado === 'Finalizada' && (
@@ -203,6 +216,17 @@ export function ActivitiesTable() {
                     >
                       <UndoIcon className="h-3.5 w-3.5 shrink-0" />
                       <span className="leading-none mt-[1px]">Revertir</span>
+                    </Button>
+                  )}
+                  {act.estado === 'Finalizada' && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 gap-1.5"
+                      onClick={() => setFinalizingActivity(act)}
+                    >
+                      <EyeIcon className="h-3.5 w-3.5 shrink-0" />
+                      <span className="leading-none mt-[1px]">Detalles</span>
                     </Button>
                   )}
                   
@@ -272,6 +296,11 @@ export function ActivitiesTable() {
                       {act.descripcion && (
                         <span className="text-xs text-muted-foreground line-clamp-1">{act.descripcion}</span>
                       )}
+                      <span className="text-[11px] text-muted-foreground">
+                        {act.etiqueta_unidad}: S/ {Number(act.precio_unitario).toFixed(2)} · minimo {act.minimo_unidades_beneficio}
+                        {act.usa_grupos ? ' · grupos' : ''}
+                        {act.usa_premios ? ' · premios externos' : ''}
+                      </span>
                     </div>
                   </TableCell>
                   <TableCell className="text-muted-foreground text-sm">
@@ -295,6 +324,11 @@ export function ActivitiesTable() {
                     <span className="font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">
                       + S/ {act.monto_recaudado.toFixed(2)}
                     </span>
+                    {act.total_beneficio > 0 && (
+                      <span className="block text-[10px] font-medium text-blue-600">
+                        Beneficio S/ {Number(act.total_beneficio).toFixed(2)}
+                      </span>
+                    )}
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-1">
@@ -317,8 +351,8 @@ export function ActivitiesTable() {
                           className="h-8 gap-1.5 bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100 hover:text-emerald-700 dark:bg-emerald-950 dark:border-emerald-800 dark:hover:bg-emerald-900"
                           onClick={() => setFinalizingActivity(act)}
                         >
-                          <CheckIcon className="h-3.5 w-3.5 shrink-0" />
-                          <span className="leading-none mt-[1px]">Finalizar</span>
+                          <EyeIcon className="h-3.5 w-3.5 shrink-0" />
+                          <span className="leading-none mt-[1px]">Ver detalles</span>
                         </Button>
                       )}
                       {act.estado === 'Finalizada' && (
@@ -331,6 +365,17 @@ export function ActivitiesTable() {
                         >
                           <UndoIcon className="h-3.5 w-3.5 shrink-0" />
                           <span className="leading-none mt-[1px]">Revertir</span>
+                        </Button>
+                      )}
+                      {act.estado === 'Finalizada' && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-8 gap-1.5"
+                          onClick={() => setFinalizingActivity(act)}
+                        >
+                          <EyeIcon className="h-3.5 w-3.5 shrink-0" />
+                          <span className="leading-none mt-[1px]">Detalles</span>
                         </Button>
                       )}
 

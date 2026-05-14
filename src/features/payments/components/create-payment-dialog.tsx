@@ -82,6 +82,8 @@ export function CreatePaymentDialog({
     setIsSubmitting(true)
 
     try {
+      let paymentId = pagoExistente?.id
+
       if (pagoExistente) {
         // Upsert / Update
         const { error } = await supabase
@@ -96,7 +98,7 @@ export function CreatePaymentDialog({
         if (error) throw error
       } else {
         // Insert new
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from('pagos')
           .insert({
             perfil_id: perfil.id,
@@ -104,6 +106,22 @@ export function CreatePaymentDialog({
             monto_pagado: nuevoTotal,
             estado: nuevoEstado
           })
+          .select()
+          .single()
+
+        if (error) throw error
+        paymentId = data.id
+      }
+
+      if (paymentId) {
+        const { error } = await supabase.from('pago_movimientos').insert({
+          pago_id: paymentId,
+          perfil_id: perfil.id,
+          cuota_id: cuota.id,
+          origen: 'manual',
+          monto: incremento,
+          nota: 'Abono manual registrado desde matriz de pagos',
+        })
 
         if (error) throw error
       }

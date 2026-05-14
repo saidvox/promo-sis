@@ -124,3 +124,42 @@
     @apply bg-background text-foreground font-sans antialiased;}
   html {
     @apply font-sans;}}
+
+@layer utilities {
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--muted-foreground) / 0.45) transparent;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted-foreground) / 0.35);
+    border: 2px solid transparent;
+    border-radius: 999px;
+    background-clip: content-box;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground) / 0.55);
+    background-clip: content-box;
+  }
+
+  .no-number-spinner::-webkit-outer-spin-button,
+  .no-number-spinner::-webkit-inner-spin-button {
+    margin: 0;
+    appearance: none;
+  }
+
+  .no-number-spinner {
+    appearance: textfield;
+    -moz-appearance: textfield;
+  }
+}

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { PlusIcon, Loader2Icon } from 'lucide-react'
 import { useSWRConfig } from 'swr'
 import { supabase } from '@/lib/supabase/client'
@@ -33,6 +33,31 @@ export function CreateExpenseDialog({ className }: { className?: string }) {
   const [categoria, setCategoria] = useState('Otros')
   const [monto, setMonto] = useState<number | ''>('')
   const [fechaProgramada, setFechaProgramada] = useState('')
+  const [actividadId, setActividadId] = useState('none')
+  const [actividadGrupoId, setActividadGrupoId] = useState('none')
+  const [activities, setActivities] = useState<Array<{ id: string; nombre: string }>>([])
+  const [activityGroups, setActivityGroups] = useState<Array<{ id: string; actividad_id: string; nombre: string }>>([])
+
+  useEffect(() => {
+    if (!open) return
+
+    const loadLinks = async () => {
+      const [activitiesRes, groupsRes] = await Promise.all([
+        supabase.from('actividades').select('id, nombre').order('fecha_evento', { ascending: false }),
+        supabase.from('actividad_grupos').select('id, actividad_id, nombre').order('created_at', { ascending: true }),
+      ])
+
+      if (!activitiesRes.error) setActivities(activitiesRes.data ?? [])
+      if (!groupsRes.error) setActivityGroups(groupsRes.data ?? [])
+    }
+
+    loadLinks()
+  }, [open])
+
+  const filteredGroups = useMemo(() => {
+    if (actividadId === 'none') return []
+    return activityGroups.filter((group) => group.actividad_id === actividadId)
+  }, [actividadId, activityGroups])
 
   const resetForm = () => {
     setConcepto('')
@@ -40,6 +65,8 @@ export function CreateExpenseDialog({ className }: { className?: string }) {
     setCategoria('Otros')
     setMonto('')
     setFechaProgramada('')
+    setActividadId('none')
+    setActividadGrupoId('none')
   }
 
   const handleOpenChange = (newOpen: boolean) => {
@@ -64,6 +91,8 @@ export function CreateExpenseDialog({ className }: { className?: string }) {
         categoria,
         monto: Number(monto),
         fecha_programada: fechaProgramada || null,
+        actividad_id: actividadId === 'none' ? null : actividadId,
+        actividad_grupo_id: actividadGrupoId === 'none' ? null : actividadGrupoId,
         estado: 'Pendiente',
       })
 
@@ -165,6 +194,53 @@ export function CreateExpenseDialog({ className }: { className?: string }) {
                 id="fecha"
                 placeholder="Selecciona la fecha de pago"
               />
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-2">
+                <Label htmlFor="actividad">Actividad vinculada</Label>
+                <Select
+                  value={actividadId}
+                  onValueChange={(value) => {
+                    setActividadId(value ?? 'none')
+                    setActividadGrupoId('none')
+                  }}
+                  disabled={isSubmitting}
+                >
+                  <SelectTrigger id="actividad">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Sin actividad</SelectItem>
+                    {activities.map((activity) => (
+                      <SelectItem key={activity.id} value={activity.id}>
+                        {activity.nombre}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="actividad-grupo">Grupo vinculado</Label>
+                <Select
+                  value={actividadGrupoId}
+                  onValueChange={(value) => setActividadGrupoId(value ?? 'none')}
+                  disabled={isSubmitting || filteredGroups.length === 0}
+                >
+                  <SelectTrigger id="actividad-grupo">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Sin grupo</SelectItem>
+                    {filteredGroups.map((group) => (
+                      <SelectItem key={group.id} value={group.id}>
+                        {group.nombre}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
 

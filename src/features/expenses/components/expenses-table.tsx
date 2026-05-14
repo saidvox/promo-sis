@@ -214,6 +214,12 @@ export function ExpensesTable() {
                     {egreso.descripcion && (
                       <p className="text-xs text-muted-foreground line-clamp-1">{egreso.descripcion}</p>
                     )}
+                    {egreso.actividades && (
+                      <p className="text-[10px] text-muted-foreground">
+                        Actividad: {egreso.actividades.nombre}
+                        {egreso.actividad_grupos ? ` · ${egreso.actividad_grupos.nombre}` : ''}
+                      </p>
+                    )}
                   </div>
                   <Badge
                     variant="outline"
@@ -344,6 +350,12 @@ export function ExpensesTable() {
                         <span className="font-medium">{egreso.concepto}</span>
                         {egreso.descripcion && (
                           <span className="text-xs text-muted-foreground line-clamp-1">{egreso.descripcion}</span>
+                        )}
+                        {egreso.actividades && (
+                          <span className="text-[10px] text-muted-foreground">
+                            Actividad: {egreso.actividades.nombre}
+                            {egreso.actividad_grupos ? ` · ${egreso.actividad_grupos.nombre}` : ''}
+                          </span>
                         )}
                       </div>
                     </TableCell>
