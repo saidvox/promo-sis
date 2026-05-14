@@ -2,7 +2,7 @@ import useSWR from 'swr'
 import { supabase } from '@/lib/supabase/client'
 import type { Database } from '@/types/database.types'
 
-type PerfilRow = Pick<Database['public']['Tables']['perfiles']['Row'], 'id' | 'nombre_completo' | 'dni' | 'rol' | 'codigo_u'>
+type PerfilRow = Pick<Database['public']['Tables']['perfiles']['Row'], 'id' | 'nombre_completo' | 'dni' | 'rol' | 'codigo_u' | 'activo'>
 type CuotaRow = Pick<Database['public']['Tables']['config_cuotas']['Row'], 'id' | 'mes_nombre' | 'monto' | 'fecha_vencimiento'>
 type PagoRow = Database['public']['Tables']['pagos']['Row']
 type InscripcionLiteRow = Pick<Database['public']['Tables']['inscripciones']['Row'], 'perfil_id' | 'monto'>
@@ -40,7 +40,7 @@ export const usePaymentsMatrix = () => {
     const [perfilesResult, inscripcionesResult, cuotasResult, pagosResult, movementsResult] = await Promise.all([
       supabase
         .from('perfiles')
-        .select('id, nombre_completo, dni, rol, codigo_u')
+        .select('id, nombre_completo, dni, rol, codigo_u, activo')
         .order('nombre_completo', { ascending: true }),
         
       supabase

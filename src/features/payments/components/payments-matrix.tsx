@@ -72,13 +72,14 @@ export function PaymentsMatrix() {
 
     const metrics: Record<string, { expected: number, collected: number }> = {}
     const { cuotasPorMes, perfilesInscritos, pagosMap, inscripcionesMap } = data
-    const totalAlumnos = perfilesInscritos.length
+    const activeProfiles = perfilesInscritos.filter((perfil) => perfil.activo)
+    const totalAlumnos = activeProfiles.length
 
     for (const mes of MESES_DEL_ANO) {
       if (mes === 'Enero') {
         // Enero es siempre Inscripción (S/ 100)
         let collected = 0
-        for (const perfil of perfilesInscritos) {
+        for (const perfil of activeProfiles) {
           collected += inscripcionesMap[perfil.id] || 0
         }
         metrics[mes] = {
@@ -91,7 +92,7 @@ export function PaymentsMatrix() {
       const cuota = cuotasPorMes[mes]
       if (cuota) {
         let collected = 0
-        for (const perfil of perfilesInscritos) {
+        for (const perfil of activeProfiles) {
           collected += pagosMap[`${perfil.id}-${cuota.id}`]?.monto_pagado || 0
         }
         metrics[mes] = {
@@ -122,6 +123,8 @@ export function PaymentsMatrix() {
     // 2. Status Filter (Mathematical evaluation)
     if (statusFilter !== 'all') {
       result = result.filter(perfil => {
+        if (!perfil.activo) return false
+
         let isClean = true
         
         // El mes de Enero (Inscripción) debe estar pagado
@@ -309,9 +312,14 @@ export function PaymentsMatrix() {
                             {perfil.dni}
                           </span>
                         )}
-                        {perfil.rol !== 'Alumno' && (
+                      {perfil.rol !== 'Alumno' && (
                           <span className={cn("text-[9px] px-1 py-0 rounded-sm font-medium tracking-wide truncate", getRoleColor(perfil.rol).replace('bg-opacity-10', 'bg-opacity-20'))}>
                             {perfil.rol}
+                          </span>
+                        )}
+                        {!perfil.activo && (
+                          <span className="text-[9px] px-1 py-0 rounded-sm font-medium bg-muted text-muted-foreground">
+                            Inactivo
                           </span>
                         )}
                       </div>

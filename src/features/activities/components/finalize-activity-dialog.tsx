@@ -112,6 +112,7 @@ export function FinalizeActivityDialog({ open, onOpenChange, activity }: Finaliz
           supabase
             .from('perfiles')
             .select('id, nombre_completo, codigo_u, inscripciones!inner(perfil_id)')
+            .eq('activo', true)
             .order('nombre_completo', { ascending: true }),
           supabase
             .from('config_cuotas')

@@ -39,6 +39,7 @@ export function CreateParticipantDialog({ className }: { className?: string }) {
   const [nombre, setNombre] = useState('')
   const [rol, setRol] = useState<Role>('Alumno')
   const [telefono, setTelefono] = useState('')
+  const [activo, setActivo] = useState(true)
 
   const resetForm = () => {
     setDni('')
@@ -46,6 +47,7 @@ export function CreateParticipantDialog({ className }: { className?: string }) {
     setNombre('')
     setRol('Alumno')
     setTelefono('')
+    setActivo(true)
   }
 
   const handleOpenChange = (newOpen: boolean) => {
@@ -89,6 +91,7 @@ export function CreateParticipantDialog({ className }: { className?: string }) {
           nombre_completo: nombre,
           rol,
           telefono: telefono || null,
+          activo,
         })
 
       if (error) throw error
@@ -242,6 +245,27 @@ export function CreateParticipantDialog({ className }: { className?: string }) {
                   <SelectItem value="Alumno">
                     <Badge variant="outline" className={getRoleColor('Alumno')}>Alumno</Badge>
                   </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="estado-participante">Estado</Label>
+              <Select
+                value={activo ? 'activo' : 'inactivo'}
+                onValueChange={(value) => setActivo(value !== 'inactivo')}
+                disabled={isSubmitting}
+              >
+                <SelectTrigger id="estado-participante">
+                  <SelectValue>
+                    <Badge variant="outline" className={activo ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30' : 'bg-muted text-muted-foreground border-border/50'}>
+                      {activo ? 'Activo' : 'Inactivo'}
+                    </Badge>
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="activo">Activo</SelectItem>
+                  <SelectItem value="inactivo">Inactivo</SelectItem>
                 </SelectContent>
               </Select>
             </div>

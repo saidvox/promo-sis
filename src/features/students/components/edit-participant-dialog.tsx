@@ -43,6 +43,7 @@ export function EditParticipantDialog({ participant }: EditParticipantDialogProp
   const [nombre, setNombre] = useState(participant.nombre_completo || '')
   const [rol, setRol] = useState<Role>((participant.rol as Role) || 'Alumno')
   const [telefono, setTelefono] = useState(participant.telefono || '')
+  const [activo, setActivo] = useState(participant.activo ?? true)
 
   // Reset form when dialog opens or participant changes
   const resetForm = () => {
@@ -51,6 +52,7 @@ export function EditParticipantDialog({ participant }: EditParticipantDialogProp
     setNombre(participant.nombre_completo || '')
     setRol((participant.rol as Role) || 'Alumno')
     setTelefono(participant.telefono || '')
+    setActivo(participant.activo ?? true)
   }
 
   const handleOpenChange = (newOpen: boolean) => {
@@ -94,6 +96,7 @@ export function EditParticipantDialog({ participant }: EditParticipantDialogProp
           nombre_completo: nombre,
           rol,
           telefono: telefono || null,
+          activo,
         })
         .eq('id', participant.id)
 
@@ -245,6 +248,30 @@ export function EditParticipantDialog({ participant }: EditParticipantDialogProp
                   </SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor={`edit-activo-${participant.id}`}>Estado</Label>
+              <Select
+                value={activo ? 'activo' : 'inactivo'}
+                onValueChange={(value) => setActivo(value !== 'inactivo')}
+                disabled={isSubmitting}
+              >
+                <SelectTrigger id={`edit-activo-${participant.id}`}>
+                  <SelectValue>
+                    <Badge variant="outline" className={activo ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30' : 'bg-muted text-muted-foreground border-border/50'}>
+                      {activo ? 'Activo' : 'Inactivo'}
+                    </Badge>
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="activo">Activo</SelectItem>
+                  <SelectItem value="inactivo">Inactivo</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Inactivo conserva sus pagos, pero no participa en actividades ni morosidad activa.
+              </p>
             </div>
           </div>
           

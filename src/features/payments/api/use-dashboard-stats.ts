@@ -34,7 +34,7 @@ export const useDashboardStats = () => {
       supabase.from('inscripciones').select('monto'),
       supabase.from('config_cuotas').select('id, monto').eq('activo', true),
       supabase.from('pagos').select('perfil_id, cuota_id, monto_pagado'),
-      supabase.from('inscripciones').select('perfil_id'),
+      supabase.from('inscripciones').select('perfil_id, perfiles!inner(activo)'),
       supabase.from('actividades').select('monto_recaudado'),
       supabase.from('abonos_egresos').select('monto_abono'),
     ])
@@ -67,7 +67,14 @@ export const useDashboardStats = () => {
       }
     }
 
-    const enrolledIds = new Set(inscritosRes.data.map(i => i.perfil_id))
+    const enrolledIds = new Set(
+      inscritosRes.data
+        .filter((i: any) => {
+          const perfil = Array.isArray(i.perfiles) ? i.perfiles[0] : i.perfiles
+          return perfil?.activo !== false
+        })
+        .map(i => i.perfil_id)
+    )
     let pendingStudentsCount = 0
 
     for (const perfilId of enrolledIds) {

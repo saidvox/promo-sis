@@ -55,6 +55,8 @@ export function ParticipantsTable() {
     let baseData = data.all
     if (activeTab === 'comite') baseData = data.staff
     if (activeTab === 'alumnos') baseData = data.students
+    if (activeTab === 'activos') baseData = data.active
+    if (activeTab === 'inactivos') baseData = data.inactive
 
     if (!searchQuery.trim()) return baseData
 
@@ -117,10 +119,12 @@ export function ParticipantsTable() {
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center flex-1">
           <Tabs value={activeTab} onValueChange={(val) => { setActiveTab(val); setCurrentPage(1); }} className="w-full sm:w-auto">
-            <TabsList className="grid w-full grid-cols-3 sm:w-[300px]">
+            <TabsList className="grid w-full grid-cols-5 sm:w-[460px]">
               <TabsTrigger value="todos">Todos</TabsTrigger>
               <TabsTrigger value="comite">Comité</TabsTrigger>
               <TabsTrigger value="alumnos">Alumnos</TabsTrigger>
+              <TabsTrigger value="activos">Activos</TabsTrigger>
+              <TabsTrigger value="inactivos">Inactivos</TabsTrigger>
             </TabsList>
           </Tabs>
           
@@ -172,6 +176,9 @@ export function ParticipantsTable() {
               {/* Second row: inscription + phone */}
               <div className="flex items-center gap-3">
                 {getInscriptionBadge(participant)}
+                <Badge variant="outline" className={participant.activo ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30 text-xs' : 'bg-muted text-muted-foreground border-border/50 text-xs'}>
+                  {participant.activo ? 'Activo' : 'Inactivo'}
+                </Badge>
                 {participant.telefono && (
                   <a
                     href={`tel:${participant.telefono}`}
@@ -211,6 +218,7 @@ export function ParticipantsTable() {
               <TableHead className="w-[150px]">Código U</TableHead>
               <TableHead>Nombre Completo</TableHead>
               <TableHead className="w-[120px] text-center">Inscripción</TableHead>
+              <TableHead className="w-[100px] text-center">Estado</TableHead>
               <TableHead className="w-[120px]">Teléfono</TableHead>
               <TableHead className="text-right">Rol</TableHead>
               <TableHead className="w-[80px] text-right">Acciones</TableHead>
@@ -224,6 +232,7 @@ export function ParticipantsTable() {
                   <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                   <TableCell><Skeleton className="h-5 w-48" /></TableCell>
                   <TableCell className="text-center"><Skeleton className="h-5 w-16 mx-auto" /></TableCell>
+                  <TableCell className="text-center"><Skeleton className="h-5 w-16 mx-auto" /></TableCell>
                   <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                   <TableCell className="text-right flex justify-end">
                     <Skeleton className="h-5 w-16" />
@@ -235,7 +244,7 @@ export function ParticipantsTable() {
               ))
             ) : filteredData.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="h-24 text-center">
+                <TableCell colSpan={8} className="h-24 text-center">
                   No hay participantes registrados en esta categoría.
                 </TableCell>
               </TableRow>
@@ -247,6 +256,11 @@ export function ParticipantsTable() {
                   <TableCell className="font-medium">{participant.nombre_completo}</TableCell>
                   <TableCell className="text-center">
                     {getInscriptionBadge(participant)}
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <Badge variant="outline" className={participant.activo ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30' : 'bg-muted text-muted-foreground border-border/50'}>
+                      {participant.activo ? 'Activo' : 'Inactivo'}
+                    </Badge>
                   </TableCell>
                   <TableCell className="text-muted-foreground">{participant.telefono || '-'}</TableCell>
                   <TableCell className="text-right">
@@ -320,11 +334,11 @@ export function ParticipantsTable() {
           <div className="flex flex-col">
             <span className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Inscritos</span>
             <span className="text-xl font-bold text-emerald-600 dark:text-emerald-400">
-              {data.all.filter(p => {
+              {data.active.filter(p => {
                 const insc = (p as any).inscripciones
                 return Array.isArray(insc) ? insc.length > 0 : !!insc
               }).length}
-              <span className="text-sm font-normal text-muted-foreground ml-1">/ {data.all.length}</span>
+              <span className="text-sm font-normal text-muted-foreground ml-1">/ {data.active.length} activos</span>
             </span>
           </div>
           <div className="h-8 w-px bg-border hidden sm:block"></div>

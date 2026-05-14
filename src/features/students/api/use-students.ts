@@ -26,12 +26,14 @@ export const useStudents = () => {
     const all = (data ?? []) as unknown as Perfil[]
     const students = all.filter((p) => p.rol === 'Alumno')
     const staff = all.filter((p) => p.rol !== 'Alumno')
+    const active = all.filter((p) => p.activo)
+    const inactive = all.filter((p) => !p.activo)
 
-    return { all, students, staff }
+    return { all, students, staff, active, inactive }
   }
 
   const { data, error, isLoading, mutate } = useSWR<
-    { all: Perfil[]; students: Perfil[]; staff: Perfil[] },
+    { all: Perfil[]; students: Perfil[]; staff: Perfil[]; active: Perfil[]; inactive: Perfil[] },
     Error
   >('api/students', fetcher)
 
