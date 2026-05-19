@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { CheckCircle2Icon, EyeIcon, Loader2Icon, PlusIcon, SearchIcon, Settings2Icon, Trash2Icon } from 'lucide-react'
 import { useSWRConfig } from 'swr'
 import { toast } from 'sonner'
@@ -89,6 +89,8 @@ export function FinalizeActivityDialog({ open, onOpenChange, activity }: Finaliz
   const [isLoading, setIsLoading] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSavingGroups, setIsSavingGroups] = useState(false)
+  const [isSavingDraft, setIsSavingDraft] = useState(false)
+  const [draftSavedAt, setDraftSavedAt] = useState<Date | null>(null)
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [groupManagerOpen, setGroupManagerOpen] = useState(false)
   const [participantSearch, setParticipantSearch] = useState('')
@@ -101,6 +103,8 @@ export function FinalizeActivityDialog({ open, onOpenChange, activity }: Finaliz
   const { updateActivity } = useActivities()
   const { mutate } = useSWRConfig()
   const isFinalized = activity?.estado === 'Finalizada'
+  const skipNextDraftSaveRef = useRef(false)
+  const draftSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     if (!open || !activity) return
@@ -111,7 +115,7 @@ export function FinalizeActivityDialog({ open, onOpenChange, activity }: Finaliz
         const [profilesRes, quotasRes, paymentsRes, groupsRes, participantsRes] = await Promise.all([
           supabase
             .from('perfiles')
-            .select('id, nombre_completo, codigo_u, inscripciones!inner(perfil_id)')
+            .select('id, nombre_completo, codigo_u, rol, inscripciones(id)')
             .eq('activo', true)
             .order('nombre_completo', { ascending: true }),
           supabase
@@ -130,11 +134,18 @@ export function FinalizeActivityDialog({ open, onOpenChange, activity }: Finaliz
         if (groupsRes.error) throw groupsRes.error
         if (participantsRes.error) throw participantsRes.error
 
-        const loadedProfiles = profilesRes.data.map((profile) => ({
-          id: profile.id,
-          nombre_completo: profile.nombre_completo,
-          codigo_u: profile.codigo_u,
-        }))
+        const loadedProfiles = profilesRes.data
+          .filter((profile) => {
+            const inscription = Array.isArray(profile.inscripciones)
+              ? profile.inscripciones[0]
+              : profile.inscripciones
+            return Boolean(inscription) || profile.rol === 'Presidente'
+          })
+          .map((profile) => ({
+            id: profile.id,
+            nombre_completo: profile.nombre_completo,
+            codigo_u: profile.codigo_u,
+          }))
         const savedParticipants = new Map(
           ((participantsRes.data ?? []) as ActividadParticipanteRow[]).map((participant) => [participant.perfil_id, participant])
         )
@@ -150,6 +161,7 @@ export function FinalizeActivityDialog({ open, onOpenChange, activity }: Finaliz
             notas: group.notas ?? '',
           }))
         )
+        skipNextDraftSaveRef.current = true
         setParticipants(
           loadedProfiles.map((perfil) => {
             const saved = savedParticipants.get(perfil.id)
@@ -171,6 +183,14 @@ export function FinalizeActivityDialog({ open, onOpenChange, activity }: Finaliz
 
     load()
   }, [activity, open])
+
+  useEffect(() => {
+    return () => {
+      if (draftSaveTimerRef.current) {
+        clearTimeout(draftSaveTimerRef.current)
+      }
+    }
+  }, [])
 
   const paymentsMap = useMemo(() => {
     const map: Record<string, PagoRow> = {}
@@ -239,9 +259,6 @@ export function FinalizeActivityDialog({ open, onOpenChange, activity }: Finaliz
         participant.cuota_id === NO_QUOTA &&
         getAvailableQuotas(participant).length > 0
     ).length
-    const missingGroup = activity.usa_grupos && groups.length > 0
-      ? participants.filter((participant) => participant.grupo_id === NO_GROUP).length
-      : 0
     const noGroups = activity.usa_grupos && groups.length === 0
     const incompleteGroups = activity.usa_grupos
       ? groups.filter((group) => !group.nombre.trim() || (activity.usa_premios && (!group.premio.trim() || toNumber(group.costo_premio) <= 0))).length
@@ -250,7 +267,6 @@ export function FinalizeActivityDialog({ open, onOpenChange, activity }: Finaliz
     if (missingUnits > 0) errors.push(`${missingUnits} participantes no tienen unidades registradas. Usa 0 si no vendieron.`)
     if (qualifyingWithoutQuota > 0) errors.push(`${qualifyingWithoutQuota} participantes generaron beneficio y no tienen cuota destino.`)
     if (noGroups) errors.push('La actividad usa grupos, pero no hay grupos registrados.')
-    if (missingGroup > 0) errors.push(`${missingGroup} participantes no tienen grupo asignado.`)
     if (incompleteGroups > 0) errors.push(`${incompleteGroups} grupos tienen nombre, premio o costo incompleto.`)
     if (totals.gross <= 0) errors.push('La actividad no tiene recaudacion registrada.')
 
@@ -276,6 +292,57 @@ export function FinalizeActivityDialog({ open, onOpenChange, activity }: Finaliz
       )
     )
   }
+
+  const saveParticipantDraft = useCallback(async () => {
+    if (!activity || isFinalized || isLoading || participants.length === 0) return
+
+    setIsSavingDraft(true)
+
+    try {
+      const draftPayload = calculatedParticipants.map(({ participant, calculated }) => ({
+        actividad_id: activity.id,
+        perfil_id: participant.perfil.id,
+        grupo_id: participant.grupo_id === NO_GROUP || participant.grupo_id.startsWith('new-') ? null : participant.grupo_id,
+        unidades_vendidas: toNumber(participant.unidades_vendidas),
+        monto_bruto: calculated.gross,
+        monto_promocion: calculated.promotion,
+        monto_beneficio: calculated.benefit,
+        monto_beneficio_aplicado: 0,
+        monto_beneficio_pendiente: calculated.benefit,
+        cuota_id: participant.cuota_id === NO_QUOTA ? null : participant.cuota_id,
+        aporte_premio: activity.usa_premios ? toNumber(participant.aporte_premio) : 0,
+      }))
+
+      const { error } = await supabase
+        .from('actividad_participantes')
+        .upsert(draftPayload, { onConflict: 'actividad_id,perfil_id' })
+
+      if (error) throw error
+
+      setDraftSavedAt(new Date())
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'No se pudo guardar el borrador de resultados'))
+    } finally {
+      setIsSavingDraft(false)
+    }
+  }, [activity, calculatedParticipants, isFinalized, isLoading, participants.length])
+
+  useEffect(() => {
+    if (!open || !activity || isFinalized || isLoading || participants.length === 0) return
+
+    if (skipNextDraftSaveRef.current) {
+      skipNextDraftSaveRef.current = false
+      return
+    }
+
+    if (draftSaveTimerRef.current) {
+      clearTimeout(draftSaveTimerRef.current)
+    }
+
+    draftSaveTimerRef.current = setTimeout(() => {
+      void saveParticipantDraft()
+    }, 700)
+  }, [activity, isFinalized, isLoading, open, participants, saveParticipantDraft])
 
   const addGroup = () => {
     setGroups((current) => [
@@ -595,18 +662,43 @@ export function FinalizeActivityDialog({ open, onOpenChange, activity }: Finaliz
 
   const upToDateCount = participants.filter((participant) => getAvailableQuotas(participant).length === 0).length
 
+  const handleMainOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen && !isFinalized && participants.length > 0) {
+      if (draftSaveTimerRef.current) {
+        clearTimeout(draftSaveTimerRef.current)
+        draftSaveTimerRef.current = null
+      }
+      void saveParticipantDraft()
+    }
+
+    onOpenChange(nextOpen)
+  }
+
   return (
     <>
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleMainOpenChange}>
       <DialogContent className="custom-scrollbar max-h-[92vh] overflow-y-auto sm:max-w-[1120px]">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <DialogTitle>{isFinalized ? 'Detalles de actividad' : 'Ver detalles y registrar resultados'}</DialogTitle>
-            <DialogDescription>
-              {isFinalized
-                ? 'Consulta resultados, grupos, beneficios y montos registrados.'
-                : 'Revisa los datos y finaliza cuando todos los resultados esten completos.'}
-            </DialogDescription>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <DialogTitle>{isFinalized ? 'Detalles de actividad' : 'Ver detalles y registrar resultados'}</DialogTitle>
+                <DialogDescription>
+                  {isFinalized
+                    ? 'Consulta resultados, grupos, beneficios y montos registrados.'
+                    : 'Revisa los datos y finaliza cuando todos los resultados esten completos.'}
+                </DialogDescription>
+              </div>
+              {!isFinalized && (
+                <Badge variant="outline" className="w-fit">
+                  {isSavingDraft
+                    ? 'Guardando borrador...'
+                    : draftSavedAt
+                      ? `Borrador guardado ${draftSavedAt.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}`
+                      : 'Borrador automatico'}
+                </Badge>
+              )}
+            </div>
           </DialogHeader>
 
           {isLoading ? (
@@ -839,7 +931,7 @@ export function FinalizeActivityDialog({ open, onOpenChange, activity }: Finaliz
           )}
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
+            <Button type="button" variant="outline" onClick={() => handleMainOpenChange(false)} disabled={isSubmitting}>
               Cancelar
             </Button>
             {!isFinalized && (
