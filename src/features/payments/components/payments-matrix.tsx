@@ -482,6 +482,7 @@ export function PaymentsMatrix() {
             perfil={activeCell ? perfilesInscritos.find(p => p.id === activeCell.perfilId) || null : null}
             cuota={activeCell ? Object.values(cuotasPorMes).find(c => c.id === activeCell.cuotaId) || null : null}
             pagoExistente={activeCell ? pagosMap[`${activeCell.perfilId}-${activeCell.cuotaId}`] : undefined}
+            movements={activeCell ? paymentMovementsMap[`${activeCell.perfilId}-${activeCell.cuotaId}`] ?? [] : []}
           />
         </Suspense>
       </div>

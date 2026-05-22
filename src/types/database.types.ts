@@ -431,6 +431,11 @@ export type Database = {
           origen: string
           pago_id: string | null
           perfil_id: string
+          voucher_filename: string | null
+          voucher_mime_type: string | null
+          voucher_path: string | null
+          voucher_size: number | null
+          voucher_uploaded_at: string | null
         }
         Insert: {
           actividad_id?: string | null
@@ -443,6 +448,11 @@ export type Database = {
           origen?: string
           pago_id?: string | null
           perfil_id: string
+          voucher_filename?: string | null
+          voucher_mime_type?: string | null
+          voucher_path?: string | null
+          voucher_size?: number | null
+          voucher_uploaded_at?: string | null
         }
         Update: {
           actividad_id?: string | null
@@ -455,6 +465,11 @@ export type Database = {
           origen?: string
           pago_id?: string | null
           perfil_id?: string
+          voucher_filename?: string | null
+          voucher_mime_type?: string | null
+          voucher_path?: string | null
+          voucher_size?: number | null
+          voucher_uploaded_at?: string | null
         }
         Relationships: [
           {

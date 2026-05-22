@@ -1,7 +1,7 @@
 import { memo } from 'react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale/es'
-import { GiftIcon, LinkIcon } from 'lucide-react'
+import { FileImageIcon, GiftIcon, LinkIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { Database } from '@/types/database.types'
 import type { PaymentMovement } from '../api/use-payments-matrix'
@@ -60,23 +60,30 @@ export const PaymentMatrixCell = memo(function PaymentMatrixCell({
   const activityBenefit = movements
     .filter((movement) => movement.origen === 'beneficio_actividad')
     .reduce((total, movement) => total + Number(movement.monto), 0)
+  const hasMovementVoucher = movements.some((movement) => Boolean(movement.voucher_path))
 
   // Si está completo (Verde), Si está incompleto (Naranja), Si está rechazado (Rojo oscuro)
   const cellContent = (
     <button
       type="button"
-      onClick={isPaid ? undefined : handleClick}
+      onClick={handleClick}
       className={cn(
         "group flex min-h-6 min-w-[36px] px-1 items-center justify-center rounded text-[10px] font-medium transition-colors outline-none",
-        isPaid ? "bg-emerald-500/10 text-emerald-600 cursor-default" : "cursor-pointer hover:bg-amber-500/20 active:scale-95",
+        isPaid ? "bg-emerald-500/10 text-emerald-600 cursor-pointer hover:bg-emerald-500/20" : "cursor-pointer hover:bg-amber-500/20 active:scale-95",
         isPending && "bg-amber-500/15 text-amber-600 shadow-[0_0_6px_rgba(245,158,11,0.2)]",
         isRejected && "bg-rose-500/10 text-rose-600"
       )}
-      title={isPaid ? "Pago completado" : "Abono parcial - Clic para completar"}
+      title={isPaid ? "Pago completado - Clic para ver historial" : "Abono parcial - Clic para completar"}
     >
       <span className="flex flex-col items-center leading-none">
         {isPaid && <span>{pago.monto_pagado}</span>}
         {isPending && <span className="tabular-nums">S/ {pago.monto_pagado}</span>}
+        {hasMovementVoucher && (
+          <span className="mt-0.5 flex items-center gap-0.5 text-[8px] text-emerald-600">
+            <FileImageIcon className="h-2.5 w-2.5" />
+            img
+          </span>
+        )}
         {activityBenefit > 0 && (
           <span className="mt-0.5 flex items-center gap-0.5 text-[8px] text-blue-600">
             <GiftIcon className="h-2.5 w-2.5" />
@@ -89,7 +96,7 @@ export const PaymentMatrixCell = memo(function PaymentMatrixCell({
   )
 
   // Si tiene voucher o estado especial, lo envolvemos en un tooltip descriptivo
-  if (pago.url_voucher || pago.created_at) {
+  if (pago.url_voucher || pago.created_at || hasMovementVoucher) {
     return (
       <Tooltip>
         <TooltipTrigger render={
@@ -124,6 +131,11 @@ export const PaymentMatrixCell = memo(function PaymentMatrixCell({
                 .filter((movement) => movement.origen === 'manual')
                 .reduce((total, movement) => total + Number(movement.monto), 0)
                 .toFixed(2)}
+            </p>
+          )}
+          {hasMovementVoucher && (
+            <p className="text-xs text-emerald-600">
+              {movements.filter((movement) => movement.voucher_path).length} comprobante(s) adjunto(s) en el historial.
             </p>
           )}
           {pago.url_voucher && (
