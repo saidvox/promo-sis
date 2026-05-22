@@ -72,6 +72,11 @@ type ParticipantDraft = {
   unidades_vendidas: number | ''
   cuota_id: string
   aporte_premio: number | ''
+  savedGross?: number
+  savedPromotion?: number
+  savedBenefit?: number
+  savedAppliedBenefit?: number
+  savedPendingBenefit?: number
 }
 
 interface FinalizeActivityDialogProps {
@@ -171,6 +176,11 @@ export function FinalizeActivityDialog({ open, onOpenChange, activity }: Finaliz
               unidades_vendidas: saved ? Number(saved.unidades_vendidas) : '',
               cuota_id: saved?.cuota_id ?? NO_QUOTA,
               aporte_premio: saved ? Number(saved.aporte_premio) : '',
+              savedGross: saved ? Number(saved.monto_bruto) : undefined,
+              savedPromotion: saved ? Number(saved.monto_promocion) : undefined,
+              savedBenefit: saved ? Number(saved.monto_beneficio) : undefined,
+              savedAppliedBenefit: saved ? Number(saved.monto_beneficio_aplicado) : undefined,
+              savedPendingBenefit: saved ? Number(saved.monto_beneficio_pendiente) : undefined,
             }
           })
         )
@@ -216,16 +226,25 @@ export function FinalizeActivityDialog({ open, onOpenChange, activity }: Finaliz
     return participants.map((participant) => {
       const quota = participant.cuota_id === NO_QUOTA ? null : quotasMap[participant.cuota_id]
       const payment = quota ? paymentsMap[`${participant.perfil.id}-${quota.id}`] : undefined
-      const calculated = calculateActivityParticipant(activity, {
-        unitsSold: toNumber(participant.unidades_vendidas),
-        currentPaid: Number(payment?.monto_pagado ?? 0),
-        quotaAmount: Number(quota?.monto ?? 0),
-        hasQuota: Boolean(quota),
-      })
+      const calculated = isFinalized && participant.savedGross !== undefined
+        ? {
+            gross: participant.savedGross,
+            promotion: participant.savedPromotion ?? 0,
+            benefit: participant.savedBenefit ?? 0,
+            appliedBenefit: participant.savedAppliedBenefit ?? 0,
+            pendingBenefit: participant.savedPendingBenefit ?? 0,
+            qualifiesForBenefit: (participant.savedBenefit ?? 0) > 0,
+          }
+        : calculateActivityParticipant(activity, {
+            unitsSold: toNumber(participant.unidades_vendidas),
+            currentPaid: Number(payment?.monto_pagado ?? 0),
+            quotaAmount: Number(quota?.monto ?? 0),
+            hasQuota: Boolean(quota),
+          })
 
       return { participant, quota, payment, calculated }
     })
-  }, [activity, participants, paymentsMap, quotasMap])
+  }, [activity, isFinalized, participants, paymentsMap, quotasMap])
 
   const totals = useMemo(() => {
     return calculatedParticipants.reduce(
