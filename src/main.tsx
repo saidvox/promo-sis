@@ -5,7 +5,7 @@ import App from './App.tsx'
 
 // Cambia este número de versión cada vez que subas cambios a producción y 
 // necesites que todos los usuarios refresquen su caché y vuelvan a iniciar sesión.
-const APP_VERSION = '1.1.0'
+const APP_VERSION = '1.2.0'
 
 const currentVersion = localStorage.getItem('APP_VERSION')
 if (currentVersion !== APP_VERSION) {

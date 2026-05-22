@@ -5,6 +5,7 @@ import { PaymentMatrixCell } from './payment-matrix-cell'
 import { exportPaymentsExcel } from '../utils/export-payments-excel'
 const CreatePaymentDialog = lazy(() => import('./create-payment-dialog').then(m => ({ default: m.CreatePaymentDialog })))
 const CreateInscripcionDialog = lazy(() => import('./create-inscripcion-dialog').then(m => ({ default: m.CreateInscripcionDialog })))
+const InscriptionVoucherDialog = lazy(() => import('./inscription-voucher-dialog').then(m => ({ default: m.InscriptionVoucherDialog })))
 import { getRoleColor } from '@/features/students/utils/get-role-color'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -29,6 +30,7 @@ type FilterStatus = 'all' | 'morosos' | 'aldia'
 export function PaymentsMatrix() {
   const { data, isLoading, error } = usePaymentsMatrix()
   const [activeCell, setActiveCell] = useState<{ perfilId: string, cuotaId: string } | null>(null)
+  const [activeInscriptionPerfilId, setActiveInscriptionPerfilId] = useState<string | null>(null)
   
   // Data Table States
   const [searchQuery, setSearchQuery] = useState('')
@@ -45,6 +47,10 @@ export function PaymentsMatrix() {
 
   const handleDialogOpenChange = useCallback((isOpen: boolean) => {
     if (!isOpen) setActiveCell(null)
+  }, [])
+
+  const handleInscriptionDialogOpenChange = useCallback((isOpen: boolean) => {
+    if (!isOpen) setActiveInscriptionPerfilId(null)
   }, [])
 
   const handleExportExcel = useCallback(async () => {
@@ -331,16 +337,24 @@ export function PaymentsMatrix() {
                     // Caso Especial: Enero (Inscripción)
                     if (mes === 'Enero') {
                       const isInscrito = !!data.inscripcionesMap[perfil.id]
+                      const inscripcion = data.inscripcionesDetailMap[perfil.id]
                       return (
                         <TableCell key={`${perfil.id}-insc`} className="border-r border-border/40 p-0">
                           <div className="flex h-10 w-full items-center justify-center">
                             {isInscrito ? (
-                              <div className="flex flex-col items-center leading-none">
+                              <button
+                                type="button"
+                                className="flex flex-col items-center leading-none rounded px-1 py-0.5 transition-colors hover:bg-emerald-500/10"
+                                title="Ver o adjuntar comprobante de inscripcion"
+                                onClick={() => setActiveInscriptionPerfilId(perfil.id)}
+                              >
                                 <div className="h-4 w-4 rounded-full bg-emerald-500/20 flex items-center justify-center">
                                   <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></div>
                                 </div>
-                                <span className="text-[8px] font-bold text-emerald-600 mt-0.5 uppercase tracking-tighter">Inscrito</span>
-                              </div>
+                                <span className="text-[8px] font-bold text-emerald-600 mt-0.5 uppercase tracking-tighter">
+                                  {inscripcion?.url_voucher ? 'Voucher' : 'Inscrito'}
+                                </span>
+                              </button>
                             ) : (
                               <div className="h-1.5 w-1.5 rounded-full bg-rose-500/40"></div>
                             )}
@@ -483,6 +497,12 @@ export function PaymentsMatrix() {
             cuota={activeCell ? Object.values(cuotasPorMes).find(c => c.id === activeCell.cuotaId) || null : null}
             pagoExistente={activeCell ? pagosMap[`${activeCell.perfilId}-${activeCell.cuotaId}`] : undefined}
             movements={activeCell ? paymentMovementsMap[`${activeCell.perfilId}-${activeCell.cuotaId}`] ?? [] : []}
+          />
+          <InscriptionVoucherDialog
+            open={activeInscriptionPerfilId !== null}
+            onOpenChange={handleInscriptionDialogOpenChange}
+            perfil={activeInscriptionPerfilId ? perfilesInscritos.find(p => p.id === activeInscriptionPerfilId) || null : null}
+            inscripcion={activeInscriptionPerfilId ? data.inscripcionesDetailMap[activeInscriptionPerfilId] : undefined}
           />
         </Suspense>
       </div>

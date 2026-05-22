@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { PlusIcon, Loader2Icon, CheckIcon, ChevronsUpDownIcon } from 'lucide-react'
+import { PlusIcon, Loader2Icon, CheckIcon, ChevronsUpDownIcon, FileImageIcon } from 'lucide-react'
 import { useSWRConfig } from 'swr'
 import { supabase } from '@/lib/supabase/client'
 import { getErrorMessage } from '@/lib/error-utils'
@@ -36,6 +36,11 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
+import {
+  removeInscriptionVoucher,
+  uploadInscriptionVoucher,
+  validateInscriptionVoucherFile,
+} from '../utils/inscription-vouchers'
 
 export function CreateInscripcionDialog({ className }: { className?: string }) {
   const [open, setOpen] = useState(false)
@@ -48,10 +53,12 @@ export function CreateInscripcionDialog({ className }: { className?: string }) {
   const [openCombobox, setOpenCombobox] = useState(false)
   const [perfilId, setPerfilId] = useState('')
   const [metodoPago, setMetodoPago] = useState('Efectivo')
+  const [voucherFile, setVoucherFile] = useState<File | null>(null)
 
   const resetForm = () => {
     setPerfilId('')
     setMetodoPago('Efectivo')
+    setVoucherFile(null)
   }
 
   const handleOpenChange = (newOpen: boolean) => {
@@ -75,14 +82,23 @@ export function CreateInscripcionDialog({ className }: { className?: string }) {
     }
 
     setIsSubmitting(true)
+    let uploadedVoucherPath: string | null = null
 
     try {
+      const inscripcionId = crypto.randomUUID()
+
+      if (voucherFile) {
+        uploadedVoucherPath = await uploadInscriptionVoucher(perfilId, inscripcionId, voucherFile)
+      }
+
       const { error } = await supabase
         .from('inscripciones')
         .insert({
+          id: inscripcionId,
           perfil_id: perfilId,
           monto: 100.0,
           metodo_pago: metodoPago,
+          url_voucher: uploadedVoucherPath,
         })
 
       if (error) throw error
@@ -99,6 +115,7 @@ export function CreateInscripcionDialog({ className }: { className?: string }) {
 
       handleOpenChange(false)
     } catch (error: unknown) {
+      await removeInscriptionVoucher(uploadedVoucherPath)
       console.error('Error insertando inscripción:', error)
       toast.error('Error al registrar inscripción.', {
         description: getErrorMessage(error, 'No se pudo registrar la inscripción.'),
@@ -109,6 +126,21 @@ export function CreateInscripcionDialog({ className }: { className?: string }) {
   }
 
   const isLoading = studentsLoading || inscripcionesLoading
+
+  const handleVoucherSelection = (file: File | null) => {
+    if (!file) {
+      setVoucherFile(null)
+      return
+    }
+
+    const validationError = validateInscriptionVoucherFile(file)
+    if (validationError) {
+      toast.error(validationError)
+      return
+    }
+
+    setVoucherFile(file)
+  }
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -253,6 +285,21 @@ export function CreateInscripcionDialog({ className }: { className?: string }) {
                   <SelectItem value="Otro">Otro medio</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="mt-2 grid gap-2">
+              <Label htmlFor="inscripcion-voucher">Comprobante opcional</Label>
+              <Input
+                id="inscripcion-voucher"
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={(event) => handleVoucherSelection(event.target.files?.[0] ?? null)}
+                disabled={isSubmitting}
+              />
+              <p className="flex items-center gap-1 text-xs text-muted-foreground">
+                <FileImageIcon className="h-3.5 w-3.5" />
+                {voucherFile ? `Seleccionado: ${voucherFile.name}` : 'JPG, PNG o WebP hasta 5 MB.'}
+              </p>
             </div>
           </div>
 

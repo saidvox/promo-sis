@@ -5,7 +5,10 @@ import type { Database } from '@/types/database.types'
 type PerfilRow = Pick<Database['public']['Tables']['perfiles']['Row'], 'id' | 'nombre_completo' | 'dni' | 'rol' | 'codigo_u' | 'activo'>
 type CuotaRow = Pick<Database['public']['Tables']['config_cuotas']['Row'], 'id' | 'mes_nombre' | 'monto' | 'fecha_vencimiento'>
 type PagoRow = Database['public']['Tables']['pagos']['Row']
-type InscripcionLiteRow = Pick<Database['public']['Tables']['inscripciones']['Row'], 'perfil_id' | 'monto'>
+export type InscripcionLiteRow = Pick<
+  Database['public']['Tables']['inscripciones']['Row'],
+  'id' | 'perfil_id' | 'monto' | 'metodo_pago' | 'url_voucher' | 'created_at'
+>
 
 export type PaymentMovement = Database['public']['Tables']['pago_movimientos']['Row'] & {
   actividades?: { nombre: string } | null
@@ -27,6 +30,7 @@ export type MatrixData = {
   paymentMovementsMap: Record<string, PaymentMovement[]>
   // js-index-maps: Mapa de inscripciones (perfilId -> monto) para tratar Enero como Inscripción
   inscripcionesMap: Record<string, number>
+  inscripcionesDetailMap: Record<string, InscripcionLiteRow>
 }
 
 /**
@@ -45,7 +49,7 @@ export const usePaymentsMatrix = () => {
         
       supabase
         .from('inscripciones')
-        .select('perfil_id, monto'),
+        .select('id, perfil_id, monto, metodo_pago, url_voucher, created_at'),
         
       supabase
         .from('config_cuotas')
@@ -100,14 +104,16 @@ export const usePaymentsMatrix = () => {
     }
 
     const inscripcionesMap: Record<string, number> = {}
+    const inscripcionesDetailMap: Record<string, InscripcionLiteRow> = {}
     for (const i of inscripciones) {
       if (i.perfil_id) {
         // En caso de fallas de fetch cache, garantizamos un valor truthy
         inscripcionesMap[i.perfil_id] = i.monto || 100 
+        inscripcionesDetailMap[i.perfil_id] = i
       }
     }
 
-    return { perfilesInscritos, cuotasPorMes, pagosMap, paymentMovementsMap, inscripcionesMap }
+    return { perfilesInscritos, cuotasPorMes, pagosMap, paymentMovementsMap, inscripcionesMap, inscripcionesDetailMap }
   }
 
   const { data, error, isLoading, mutate } = useSWR<MatrixData, Error>(
