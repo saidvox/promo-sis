@@ -18,6 +18,8 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { TrendingUp, WalletMinimal, Users2, ArrowDownCircle } from 'lucide-react'
+import { format } from 'date-fns'
+import { es } from 'date-fns/locale'
 
 // Constants
 const GOAL_AMOUNT = 100000 
@@ -152,6 +154,7 @@ export function DashboardPage() {
                   <TableRow>
                     <TableHead>Alumno</TableHead>
                     <TableHead className="hidden md:table-cell">Cuota</TableHead>
+                    <TableHead className="hidden md:table-cell">Fecha y hora</TableHead>
                     <TableHead>Estado</TableHead>
                     <TableHead className="text-right">Monto</TableHead>
                   </TableRow>
@@ -162,8 +165,18 @@ export function DashboardPage() {
                       <TableCell>
                         <div className="font-medium text-sm leading-tight">{pago.perfil?.nombre_completo}</div>
                         <div className="text-xs text-muted-foreground">{pago.perfil?.codigo_u}</div>
+                        {pago.created_at && (
+                          <div className="mt-1 text-[11px] text-muted-foreground md:hidden">
+                            {format(new Date(pago.created_at), 'd MMM yyyy, HH:mm', { locale: es })}
+                          </div>
+                        )}
                       </TableCell>
                       <TableCell className="hidden md:table-cell">{pago.config_cuotas?.mes_nombre}</TableCell>
+                      <TableCell className="hidden text-xs text-muted-foreground md:table-cell">
+                        {pago.created_at
+                          ? format(new Date(pago.created_at), 'd MMM yyyy, HH:mm', { locale: es })
+                          : '-'}
+                      </TableCell>
                       <TableCell>
                         <Badge
                           variant={pago.estado === 'Pagado' ? 'default' : pago.estado === 'Pendiente' ? 'secondary' : 'destructive'}
@@ -179,7 +192,7 @@ export function DashboardPage() {
                   ))}
                   {(!payments || payments.length === 0) && (
                     <TableRow>
-                      <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
+                      <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
                         No se ha registrado ninguna operación financiera aún.
                       </TableCell>
                     </TableRow>
