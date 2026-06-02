@@ -35,9 +35,9 @@ import {
 import type { AbonoRow, EgresoWithAbonos } from '../api/use-expenses'
 
 interface ManageExpensePaymentsDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  egreso: EgresoWithAbonos | null
+  readonly open: boolean
+  readonly onOpenChange: (open: boolean) => void
+  readonly egreso: EgresoWithAbonos | null
 }
 
 export function ManageExpensePaymentsDialog({
@@ -80,7 +80,7 @@ export function ManageExpensePaymentsDialog({
 
   const VOUCHER_BUCKET = 'expense-vouchers'
   const MAX_VOUCHER_SIZE = 5 * 1024 * 1024
-  const ALLOWED_VOUCHER_TYPES = ['image/jpeg', 'image/png', 'image/webp']
+  const ALLOWED_VOUCHER_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp'])
 
   const sanitizeFileName = (fileName: string) =>
     fileName
@@ -91,7 +91,7 @@ export function ManageExpensePaymentsDialog({
       .slice(0, 90)
 
   const validateVoucherFile = (file: File) => {
-    if (!ALLOWED_VOUCHER_TYPES.includes(file.type)) {
+    if (!ALLOWED_VOUCHER_TYPES.has(file.type)) {
       return 'Solo se permiten imagenes JPG, PNG o WebP.'
     }
     if (file.size > MAX_VOUCHER_SIZE) {
@@ -180,7 +180,7 @@ export function ManageExpensePaymentsDialog({
         .createSignedUrl(abono.voucher_path, 60)
 
       if (error) throw error
-      window.open(data.signedUrl, '_blank', 'noopener,noreferrer')
+      globalThis.open(data.signedUrl, '_blank', 'noopener,noreferrer')
     } catch (error: any) {
       toast.error(error.message || 'No se pudo abrir el comprobante')
     } finally {

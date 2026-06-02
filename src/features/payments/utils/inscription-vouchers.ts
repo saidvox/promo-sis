@@ -47,7 +47,7 @@ export const uploadInscriptionVoucher = async (perfilId: string, inscripcionId: 
 
 export const openInscriptionVoucher = async (pathOrUrl: string) => {
   if (pathOrUrl.startsWith('http://') || pathOrUrl.startsWith('https://')) {
-    window.open(pathOrUrl, '_blank', 'noopener,noreferrer')
+    globalThis.open(pathOrUrl, '_blank', 'noopener,noreferrer')
     return
   }
 
@@ -56,7 +56,7 @@ export const openInscriptionVoucher = async (pathOrUrl: string) => {
     .createSignedUrl(pathOrUrl, 60)
 
   if (error) throw error
-  window.open(data.signedUrl, '_blank', 'noopener,noreferrer')
+  globalThis.open(data.signedUrl, '_blank', 'noopener,noreferrer')
 }
 
 export const removeInscriptionVoucher = async (pathOrUrl: string | null) => {

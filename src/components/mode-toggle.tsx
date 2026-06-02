@@ -9,7 +9,7 @@ export function ModeToggle() {
     let newTheme: "light" | "dark" = "light"
     
     if (theme === "system") {
-      const isDark = window.matchMedia("(prefers-color-scheme: dark)").matches
+      const isDark = globalThis.matchMedia("(prefers-color-scheme: dark)").matches
       newTheme = isDark ? "light" : "dark"
     } else {
       newTheme = theme === "dark" ? "light" : "dark"

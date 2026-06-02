@@ -1,11 +1,11 @@
-import { createContext, useContext, useEffect, useState } from "react"
+import { createContext, useContext, useEffect, useMemo, useState } from "react"
 
 type Theme = "dark" | "light" | "system"
 
 type ThemeProviderProps = {
-  children: React.ReactNode
-  defaultTheme?: Theme
-  storageKey?: string
+  readonly children: React.ReactNode
+  readonly defaultTheme?: Theme
+  readonly storageKey?: string
 }
 
 type ThemeProviderState = {
@@ -24,19 +24,18 @@ export function ThemeProvider({
   children,
   defaultTheme = "system",
   storageKey = "vite-ui-theme",
-  ...props
 }: ThemeProviderProps) {
-  const [theme, setTheme] = useState<Theme>(
-    () => (localStorage.getItem(storageKey) as Theme) || defaultTheme
+  const [theme, setThemeState] = useState<Theme>(
+    () => (globalThis.localStorage.getItem(storageKey) as Theme) || defaultTheme
   )
 
   useEffect(() => {
-    const root = window.document.documentElement
+    const root = globalThis.document.documentElement
 
     root.classList.remove("light", "dark")
 
     if (theme === "system") {
-      const systemTheme = window.matchMedia("(prefers-color-scheme: dark)")
+      const systemTheme = globalThis.matchMedia("(prefers-color-scheme: dark)")
         .matches
         ? "dark"
         : "light"
@@ -48,16 +47,19 @@ export function ThemeProvider({
     root.classList.add(theme)
   }, [theme])
 
-  const value = {
-    theme,
-    setTheme: (theme: Theme) => {
-      localStorage.setItem(storageKey, theme)
-      setTheme(theme)
-    },
-  }
+  const value = useMemo(
+    () => ({
+      theme,
+      setTheme: (nextTheme: Theme) => {
+        globalThis.localStorage.setItem(storageKey, nextTheme)
+        setThemeState(nextTheme)
+      },
+    }),
+    [storageKey, theme]
+  )
 
   return (
-    <ThemeProviderContext.Provider {...props} value={value}>
+    <ThemeProviderContext.Provider value={value}>
       {children}
     </ThemeProviderContext.Provider>
   )

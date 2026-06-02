@@ -31,17 +31,17 @@ type PagoRow = Database['public']['Tables']['pagos']['Row']
 type MovementInsert = Database['public']['Tables']['pago_movimientos']['Insert']
 
 interface CreatePaymentDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  perfil: PerfilRow | null
-  cuota: CuotaRow | null
-  pagoExistente?: PagoRow
-  movements?: PaymentMovement[]
+  readonly open: boolean
+  readonly onOpenChange: (open: boolean) => void
+  readonly perfil: PerfilRow | null
+  readonly cuota: CuotaRow | null
+  readonly pagoExistente?: PagoRow
+  readonly movements?: PaymentMovement[]
 }
 
 const VOUCHER_BUCKET = 'payment-vouchers'
 const MAX_VOUCHER_SIZE = 5 * 1024 * 1024
-const ALLOWED_VOUCHER_TYPES = ['image/jpeg', 'image/png', 'image/webp']
+const ALLOWED_VOUCHER_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp'])
 
 const sanitizeFileName = (fileName: string) =>
   fileName
@@ -52,7 +52,7 @@ const sanitizeFileName = (fileName: string) =>
     .slice(0, 90)
 
 const validateVoucherFile = (file: File) => {
-  if (!ALLOWED_VOUCHER_TYPES.includes(file.type)) {
+  if (!ALLOWED_VOUCHER_TYPES.has(file.type)) {
     return 'Solo se permiten imagenes JPG, PNG o WebP.'
   }
 
@@ -198,7 +198,7 @@ export function CreatePaymentDialog({
   }
 
   const handleDeleteMovement = async (movement: PaymentMovement) => {
-    const confirmDelete = window.confirm(`¿Estás seguro de que deseas eliminar este abono de S/ ${Number(movement.monto).toFixed(2)}?`)
+    const confirmDelete = globalThis.confirm(`¿Estás seguro de que deseas eliminar este abono de S/ ${Number(movement.monto).toFixed(2)}?`)
     if (!confirmDelete) return
 
     setIsSubmitting(true)
@@ -399,7 +399,7 @@ export function CreatePaymentDialog({
         .createSignedUrl(movement.voucher_path, 60)
 
       if (error) throw error
-      window.open(data.signedUrl, '_blank', 'noopener,noreferrer')
+      globalThis.open(data.signedUrl, '_blank', 'noopener,noreferrer')
     } catch (error: any) {
       toast.error(error.message || 'No se pudo abrir el comprobante')
     } finally {

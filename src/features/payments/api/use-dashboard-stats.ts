@@ -9,6 +9,59 @@ export type DashboardStats = {
   totalInscripciones: number
 }
 
+type PaymentSummary = {
+  perfil_id: string | null
+  cuota_id: string | null
+  monto_pagado: number
+}
+
+type EnrollmentSummary = {
+  perfil_id: string
+  perfiles: { activo: boolean } | { activo: boolean }[] | null
+}
+
+type ActiveQuota = {
+  id: string
+  monto: number
+}
+
+function buildPaymentsMap(payments: PaymentSummary[]) {
+  const paymentsMap: Record<string, number> = {}
+  for (const payment of payments) {
+    if (payment.perfil_id && payment.cuota_id) {
+      paymentsMap[`${payment.perfil_id}-${payment.cuota_id}`] = payment.monto_pagado
+    }
+  }
+  return paymentsMap
+}
+
+function isActiveEnrollment(enrollment: EnrollmentSummary) {
+  const profile = Array.isArray(enrollment.perfiles)
+    ? enrollment.perfiles[0]
+    : enrollment.perfiles
+  return profile?.activo !== false
+}
+
+function countPendingStudents(
+  enrollments: EnrollmentSummary[],
+  activeQuotas: ActiveQuota[],
+  paymentsMap: Record<string, number>
+) {
+  const enrolledIds = new Set(
+    enrollments.filter(isActiveEnrollment).map((enrollment) => enrollment.perfil_id)
+  )
+
+  let pendingStudentsCount = 0
+  for (const profileId of enrolledIds) {
+    const hasDebt = activeQuotas.some((quota) => {
+      const paidAmount = paymentsMap[`${profileId}-${quota.id}`] || 0
+      return paidAmount < quota.monto
+    })
+    if (hasDebt) pendingStudentsCount++
+  }
+  return pendingStudentsCount
+}
+
 /**
  * Hook analítico: Usa strict 'async-parallel' para disparar requests simultáneas 
  * mitigando el Waterfall, devolviendo métricas unificadas, rápidas usando Promise.all().
@@ -69,33 +122,12 @@ export const useDashboardStats = () => {
 
     // Evaluar deudores reales desde la Matriz:
     // Un alumno tiene deuda si existe al menos 1 cuota activa que NO pagó completamente
-    const cuotasActivas = cuotasRes.data
-    const pagosMap: Record<string, number> = {}
-    for (const p of allPagosRes.data) {
-      if (p.perfil_id && p.cuota_id) {
-        pagosMap[`${p.perfil_id}-${p.cuota_id}`] = p.monto_pagado
-      }
-    }
-
-    const enrolledIds = new Set(
-      inscritosRes.data
-        .filter((i: any) => {
-          const perfil = Array.isArray(i.perfiles) ? i.perfiles[0] : i.perfiles
-          return perfil?.activo !== false
-        })
-        .map(i => i.perfil_id)
+    const paymentsMap = buildPaymentsMap(allPagosRes.data)
+    const pendingStudentsCount = countPendingStudents(
+      inscritosRes.data,
+      cuotasRes.data,
+      paymentsMap
     )
-    let pendingStudentsCount = 0
-
-    for (const perfilId of enrolledIds) {
-      for (const cuota of cuotasActivas) {
-        const montoPagado = pagosMap[`${perfilId}-${cuota.id}`] || 0
-        if (montoPagado < cuota.monto) {
-          pendingStudentsCount++
-          break // Basta 1 mes con deuda para contar al alumno
-        }
-      }
-    }
 
     return {
       totalIncome,

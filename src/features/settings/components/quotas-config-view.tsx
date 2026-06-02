@@ -284,7 +284,7 @@ export function QuotasConfigView() {
                     min="1"
                     className="pl-8 text-lg font-semibold"
                     value={monto}
-                    onChange={(e) => setMonto(parseFloat(e.target.value) || 0)}
+                    onChange={(e) => setMonto(Number.parseFloat(e.target.value) || 0)}
                     required
                   />
                 </div>

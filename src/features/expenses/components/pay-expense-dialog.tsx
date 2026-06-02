@@ -24,7 +24,7 @@ import type { EgresoWithAbonos } from '../api/use-expenses'
 
 const VOUCHER_BUCKET = 'expense-vouchers'
 const MAX_VOUCHER_SIZE = 5 * 1024 * 1024
-const ALLOWED_VOUCHER_TYPES = ['image/jpeg', 'image/png', 'image/webp']
+const ALLOWED_VOUCHER_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp'])
 
 const sanitizeFileName = (fileName: string) =>
   fileName
@@ -35,7 +35,7 @@ const sanitizeFileName = (fileName: string) =>
     .slice(0, 90)
 
 const validateVoucherFile = (file: File) => {
-  if (!ALLOWED_VOUCHER_TYPES.includes(file.type)) {
+  if (!ALLOWED_VOUCHER_TYPES.has(file.type)) {
     return 'Solo se permiten imagenes JPG, PNG o WebP.'
   }
 
@@ -50,10 +50,10 @@ const buildVoucherPath = (egresoId: string, movementId: string, file: File) =>
   `${egresoId}/${movementId}-${Date.now()}-${sanitizeFileName(file.name)}`
 
 interface PayExpenseDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  egreso: EgresoWithAbonos | null
-  saldoDisponible: number
+  readonly open: boolean
+  readonly onOpenChange: (open: boolean) => void
+  readonly egreso: EgresoWithAbonos | null
+  readonly saldoDisponible: number
 }
 
 export function PayExpenseDialog({ open, onOpenChange, egreso, saldoDisponible }: PayExpenseDialogProps) {
@@ -76,7 +76,7 @@ export function PayExpenseDialog({ open, onOpenChange, egreso, saldoDisponible }
 
   if (!egreso) return null
 
-  const montoAbonoNum = parseFloat(montoAbono) || 0
+  const montoAbonoNum = Number.parseFloat(montoAbono) || 0
   const saldoDespues = saldoDisponible - montoAbonoNum
   const insufficient = saldoDespues < 0
   const excedePendiente = montoAbonoNum > pendiente
@@ -135,15 +135,16 @@ export function PayExpenseDialog({ open, onOpenChange, egreso, saldoDisponible }
       const localDateTimeStr = `${fechaPago}T${timeString}`
       const customFechaPago = new Date(localDateTimeStr).toISOString()
 
+      const abonoData = {
+        id: movementId,
+        egreso_id: egreso.id,
+        monto_abono: montoAbonoNum,
+        fecha_pago: customFechaPago,
+        ...voucherData,
+      }
       const { error: abonoError } = await supabase
         .from('abonos_egresos')
-        .insert({
-          id: movementId,
-          egreso_id: egreso.id,
-          monto_abono: montoAbonoNum,
-          fecha_pago: customFechaPago,
-          ...(voucherData ?? {})
-        })
+        .insert(abonoData)
 
       if (abonoError) throw abonoError
       voucherPersisted = true

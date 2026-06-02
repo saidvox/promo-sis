@@ -7,14 +7,14 @@ import App from './App.tsx'
 // necesites que todos los usuarios refresquen su caché y vuelvan a iniciar sesión.
 const APP_VERSION = '1.2.0'
 
-const currentVersion = localStorage.getItem('APP_VERSION')
+const currentVersion = globalThis.localStorage.getItem('APP_VERSION')
 if (currentVersion !== APP_VERSION) {
   // Limpiar toda la data, forzar cierre de sesión y purgar caché de SWR
-  localStorage.clear()
-  sessionStorage.clear()
-  localStorage.setItem('APP_VERSION', APP_VERSION)
+  globalThis.localStorage.clear()
+  globalThis.sessionStorage.clear()
+  globalThis.localStorage.setItem('APP_VERSION', APP_VERSION)
   // Recargar la página para obtener los nuevos scripts del servidor
-  window.location.reload()
+  globalThis.location.reload()
 } else {
   createRoot(document.getElementById('root')!).render(
     <StrictMode>

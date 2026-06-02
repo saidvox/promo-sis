@@ -39,6 +39,11 @@ function normalizePaidAmount(amount: number | null | undefined, rejected?: boole
   return Number(amount ?? 0)
 }
 
+function getPaymentStatus(paid: number, expected: number): ExcelStatus {
+  if (paid >= expected) return 'Al dia'
+  return paid > 0 ? 'Parcial' : 'Pendiente'
+}
+
 function getMonthDetail(data: MatrixData, profileId: string, month: MesAno): MonthDetail {
   if (month === 'Enero') {
     const paid = normalizePaidAmount(data.inscripcionesMap[profileId])
@@ -52,7 +57,7 @@ function getMonthDetail(data: MatrixData, profileId: string, month: MesAno): Mon
       manualPaid: paid,
       activityBenefit: 0,
       debt,
-      status: paid >= INSCRIPCION_AMOUNT ? 'Al dia' : paid > 0 ? 'Parcial' : 'Pendiente',
+      status: getPaymentStatus(paid, INSCRIPCION_AMOUNT),
       dueDate: '-',
       origins: 'Inscripcion',
     }
@@ -102,7 +107,7 @@ function getMonthDetail(data: MatrixData, profileId: string, month: MesAno): Mon
     manualPaid,
     activityBenefit,
     debt,
-    status: paid >= expected ? 'Al dia' : paid > 0 ? 'Parcial' : 'Pendiente',
+    status: getPaymentStatus(paid, expected),
     dueDate: fee.fecha_vencimiento ?? '-',
     origins,
   }
@@ -132,14 +137,14 @@ function buildReportRows(data: MatrixData): ParticipantReportRow[] {
 }
 
 function downloadBlob(blob: Blob, filename: string) {
-  const url = window.URL.createObjectURL(blob)
+  const url = globalThis.URL.createObjectURL(blob)
   const link = document.createElement('a')
   link.href = url
   link.download = filename
   document.body.appendChild(link)
   link.click()
   link.remove()
-  window.URL.revokeObjectURL(url)
+  globalThis.URL.revokeObjectURL(url)
 }
 
 function argb(hex: string) {

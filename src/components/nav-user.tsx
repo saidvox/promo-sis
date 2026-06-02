@@ -55,7 +55,7 @@ export function NavUser({
       const { error } = await supabase.auth.signOut()
       if (error) throw error
       toast.success("Sesión cerrada correctamente")
-      window.location.reload() 
+      globalThis.location.reload()
     } catch {
       toast.error("Error al cerrar sesión")
     }
@@ -80,7 +80,7 @@ export function NavUser({
       setIsUploading(true)
       
       const fileExt = file.name.split('.').pop()
-      const fileName = `${session.user.id}-${Math.random()}.${fileExt}`
+      const fileName = `${session.user.id}-${globalThis.crypto.randomUUID()}.${fileExt}`
       const filePath = `${session.user.id}/${fileName}`
 
       // 1. Subir al Storage

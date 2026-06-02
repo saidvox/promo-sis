@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react"
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react"
 
 export type PageView = "dashboard" | "students" | "payments" | "expenses" | "activities" | "settings"
 
@@ -35,40 +35,41 @@ export function getPageHref(page: PageView) {
   return getHashForPage(page)
 }
 
-export function NavigationProvider({ children }: { children: ReactNode }) {
+export function NavigationProvider({ children }: { readonly children: ReactNode }) {
   const [currentPage, setCurrentPage] = useState<PageView>(() => {
     if (typeof window === "undefined") return DEFAULT_PAGE
-    return getPageFromHash(window.location.hash)
+    return getPageFromHash(globalThis.location.hash)
   })
 
   useEffect(() => {
     const syncPageFromHash = () => {
-      const nextPage = getPageFromHash(window.location.hash)
+      const nextPage = getPageFromHash(globalThis.location.hash)
       setCurrentPage(nextPage)
 
       const expectedHash = getHashForPage(nextPage)
-      if (window.location.hash !== expectedHash) {
-        window.history.replaceState(null, "", expectedHash)
+      if (globalThis.location.hash !== expectedHash) {
+        globalThis.history.replaceState(null, "", expectedHash)
       }
     }
 
     syncPageFromHash()
-    window.addEventListener("hashchange", syncPageFromHash)
-    return () => window.removeEventListener("hashchange", syncPageFromHash)
+    globalThis.addEventListener("hashchange", syncPageFromHash)
+    return () => globalThis.removeEventListener("hashchange", syncPageFromHash)
   }, [])
 
-  const navigate = (page: PageView) => {
+  const navigate = useCallback((page: PageView) => {
     const nextHash = getHashForPage(page)
-    if (window.location.hash === nextHash) {
+    if (globalThis.location.hash === nextHash) {
       setCurrentPage(page)
       return
     }
 
-    window.location.hash = nextHash
-  }
+    globalThis.location.hash = nextHash
+  }, [])
+  const value = useMemo(() => ({ currentPage, navigate }), [currentPage, navigate])
 
   return (
-    <NavigationContext.Provider value={{ currentPage, navigate }}>
+    <NavigationContext.Provider value={value}>
       {children}
     </NavigationContext.Provider>
   )
