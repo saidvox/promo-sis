@@ -28,7 +28,7 @@ import {
 } from '@/components/ui/select'
 import { toast } from 'sonner'
 
-export function CreateParticipantDialog({ className }: { className?: string }) {
+export function CreateParticipantDialog({ className }: { readonly className?: string }) {
   const [open, setOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const { mutate } = useSWRConfig()

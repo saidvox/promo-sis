@@ -21,9 +21,9 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 
 interface EditActivityDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  activity: ActividadRow | null
+  readonly open: boolean
+  readonly onOpenChange: (open: boolean) => void
+  readonly activity: ActividadRow | null
 }
 
 export function EditActivityDialog({ open, onOpenChange, activity }: EditActivityDialogProps) {

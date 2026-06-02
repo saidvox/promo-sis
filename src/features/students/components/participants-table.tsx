@@ -31,6 +31,14 @@ import { getRoleColor } from '@/features/students/utils/get-role-color'
 const CreateParticipantDialog = lazy(() => import('./create-participant-dialog').then(m => ({ default: m.CreateParticipantDialog })))
 const EditParticipantDialog = lazy(() => import('./edit-participant-dialog').then(m => ({ default: m.EditParticipantDialog })))
 
+const MOBILE_SKELETON_KEYS = ['mobile-participant-1', 'mobile-participant-2', 'mobile-participant-3', 'mobile-participant-4']
+const TABLE_SKELETON_KEYS = ['table-participant-1', 'table-participant-2', 'table-participant-3', 'table-participant-4', 'table-participant-5']
+
+function hasInscription(participant: Perfil) {
+  const inscripciones = participant.inscripciones
+  return Array.isArray(inscripciones) ? inscripciones.length > 0 : !!inscripciones
+}
+
 export function ParticipantsTable() {
   const { data, isLoading, error } = useStudents()
   const { mutate } = useSWRConfig()
@@ -100,8 +108,7 @@ export function ParticipantsTable() {
   }
 
   const getInscriptionBadge = (participant: Perfil) => {
-    const insc = (participant as any).inscripciones
-    const isEnrolled = Array.isArray(insc) ? insc.length > 0 : !!insc
+    const isEnrolled = hasInscription(participant)
     return isEnrolled ? (
       <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/30 dark:text-emerald-400 text-xs">
         Inscrito
@@ -148,8 +155,8 @@ export function ParticipantsTable() {
       {/* MOBILE Card View (hidden on sm+) */}
       <div className="block sm:hidden space-y-2">
         {isLoading ? (
-          Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="rounded-xl border bg-card p-4 space-y-3">
+          MOBILE_SKELETON_KEYS.map((key) => (
+            <div key={key} className="rounded-xl border bg-card p-4 space-y-3">
               <Skeleton className="h-5 w-40" />
               <Skeleton className="h-4 w-28" />
               <Skeleton className="h-5 w-16" />
@@ -226,8 +233,8 @@ export function ParticipantsTable() {
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              Array.from({ length: 5 }).map((_, i) => (
-                <TableRow key={i}>
+              TABLE_SKELETON_KEYS.map((key) => (
+                <TableRow key={key}>
                   <TableCell><Skeleton className="h-5 w-20" /></TableCell>
                   <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                   <TableCell><Skeleton className="h-5 w-48" /></TableCell>
@@ -334,10 +341,7 @@ export function ParticipantsTable() {
           <div className="flex flex-col">
             <span className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Inscritos</span>
             <span className="text-xl font-bold text-emerald-600 dark:text-emerald-400">
-              {data.active.filter(p => {
-                const insc = (p as any).inscripciones
-                return Array.isArray(insc) ? insc.length > 0 : !!insc
-              }).length}
+              {data.active.filter(hasInscription).length}
               <span className="text-sm font-normal text-muted-foreground ml-1">/ {data.active.length} activos</span>
             </span>
           </div>
@@ -345,10 +349,7 @@ export function ParticipantsTable() {
           <div className="flex flex-col">
             <span className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Recaudado por Inscripciones</span>
             <span className="text-xl font-bold">
-              S/ {(data.all.filter(p => {
-                const insc = (p as any).inscripciones
-                return Array.isArray(insc) ? insc.length > 0 : !!insc
-              }).length * 100).toLocaleString('es-PE', { minimumFractionDigits: 2 })}
+              S/ {(data.all.filter(hasInscription).length * 100).toLocaleString('es-PE', { minimumFractionDigits: 2 })}
             </span>
           </div>
         </div>

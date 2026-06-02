@@ -121,8 +121,8 @@ export function PaymentsMatrix() {
       const q = searchQuery.toLowerCase().trim()
       result = result.filter(perfil => 
         perfil.nombre_completo.toLowerCase().includes(q) ||
-        (perfil.dni && perfil.dni.includes(q)) ||
-        (perfil.codigo_u && perfil.codigo_u.toLowerCase().includes(q))
+        perfil.dni?.includes(q) ||
+        perfil.codigo_u?.toLowerCase().includes(q)
       )
     }
 

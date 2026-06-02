@@ -29,7 +29,7 @@ import {
 import { toast } from 'sonner'
 
 interface EditParticipantDialogProps {
-  participant: Perfil
+  readonly participant: Perfil
 }
 
 export function EditParticipantDialog({ participant }: EditParticipantDialogProps) {

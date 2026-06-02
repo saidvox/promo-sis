@@ -23,7 +23,7 @@ import {
 import { DatePicker } from '@/components/ui/date-picker'
 import { cn } from '@/lib/utils'
 
-export function CreateExpenseDialog({ className }: { className?: string }) {
+export function CreateExpenseDialog({ className }: { readonly className?: string }) {
   const [open, setOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const { mutate } = useSWRConfig()

@@ -42,7 +42,24 @@ import {
   validateInscriptionVoucherFile,
 } from '../utils/inscription-vouchers'
 
-export function CreateInscripcionDialog({ className }: { className?: string }) {
+function renderStudentSelectionLabel(isLoading: boolean, selectedStudent?: Perfil) {
+  if (isLoading) {
+    return (
+      <span className="flex items-center text-muted-foreground">
+        <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
+        Cargando...
+      </span>
+    )
+  }
+
+  if (selectedStudent) {
+    return <span className="truncate">{selectedStudent.nombre_completo}</span>
+  }
+
+  return <span className="text-muted-foreground">Escribe un nombre o DNI...</span>
+}
+
+export function CreateInscripcionDialog({ className }: { readonly className?: string }) {
   const [open, setOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const { mutate } = useSWRConfig()
@@ -182,16 +199,7 @@ export function CreateInscripcionDialog({ className }: { className?: string }) {
                       className="w-full justify-between font-normal"
                       disabled={isLoading || isSubmitting}
                     >
-                      {isLoading ? (
-                        <span className="flex items-center text-muted-foreground">
-                          <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
-                          Cargando...
-                        </span>
-                      ) : selectedStudent ? (
-                        <span className="truncate">{selectedStudent.nombre_completo}</span>
-                      ) : (
-                        <span className="text-muted-foreground">Escribe un nombre o DNI...</span>
-                      )}
+                      {renderStudentSelectionLabel(isLoading, selectedStudent)}
                       <ChevronsUpDownIcon className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                   }

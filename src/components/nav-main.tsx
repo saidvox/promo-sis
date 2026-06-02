@@ -8,16 +8,16 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
 
-import { getPageHref, useNavigation, type PageView } from "@/hooks/use-navigation"
+import { useNavigation, type PageView } from "@/hooks/use-navigation"
 
 export function NavMain({
   items,
 }: {
-  items: {
-    title: string
-    url: string
-    icon?: React.ReactNode
-    badge?: string
+  readonly items: {
+    readonly title: string
+    readonly url: string
+    readonly icon?: React.ReactNode
+    readonly badge?: string
   }[]
 }) {
   const { currentPage, navigate } = useNavigation()
@@ -31,8 +31,8 @@ export function NavMain({
               <SidebarMenuButton 
                 tooltip={item.title}
                 isActive={currentPage === item.url}
-                render={<a href={getPageHref(item.url as PageView)} />}
                 onClick={() => navigate(item.url as PageView)}
+                aria-current={currentPage === item.url ? "page" : undefined}
                 className="flex items-center justify-between"
               >
                 <div className="flex items-center gap-2">

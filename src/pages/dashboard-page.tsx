@@ -24,6 +24,19 @@ import { es } from 'date-fns/locale'
 // Constants
 const GOAL_AMOUNT = 100000 
 
+function getPaymentBadgeVariant(status: string) {
+  if (status === 'Pagado') return 'default'
+  if (status === 'Pendiente') return 'secondary'
+  return 'destructive'
+}
+
+function getPaymentBadgeClass(status: string) {
+  if (status === 'Pagado') {
+    return "text-xs bg-primary text-primary-foreground hover:bg-primary/80"
+  }
+  return "text-xs"
+}
+
 export function DashboardPage() {
   const { data: stats, isLoading: isStatsLoading, error: statsError } = useDashboardStats()
   const { data: payments, isLoading: isPaymentsLoading, error: paymentsError } = usePayments()
@@ -160,7 +173,12 @@ export function DashboardPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {payments?.slice(0, 5).map((pago) => (
+                  {payments?.slice(0, 5).map((pago) => {
+                    const paymentStatus = pago.estado ?? 'Pendiente'
+                    const paymentVariant = getPaymentBadgeVariant(paymentStatus)
+                    const paymentClassName = getPaymentBadgeClass(paymentStatus)
+
+                    return (
                     <TableRow key={pago.id}>
                       <TableCell>
                         <div className="font-medium text-sm leading-tight">{pago.perfil?.nombre_completo}</div>
@@ -179,17 +197,18 @@ export function DashboardPage() {
                       </TableCell>
                       <TableCell>
                         <Badge
-                          variant={pago.estado === 'Pagado' ? 'default' : pago.estado === 'Pendiente' ? 'secondary' : 'destructive'}
-                          className={`text-xs ${pago.estado === 'Pagado' ? "bg-primary text-primary-foreground hover:bg-primary/80" : ""}`}
+                          variant={paymentVariant}
+                          className={paymentClassName}
                         >
-                          {pago.estado}
+                          {paymentStatus}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right font-medium tabular-nums text-sm">
                         S/ {pago.monto_pagado.toLocaleString('es-PE', { minimumFractionDigits: 2 })}
                       </TableCell>
                     </TableRow>
-                  ))}
+                    )
+                  })}
                   {(!payments || payments.length === 0) && (
                     <TableRow>
                       <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">

@@ -80,9 +80,9 @@ type ParticipantDraft = {
 }
 
 interface FinalizeActivityDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  activity: ActividadRow | null
+  readonly open: boolean
+  readonly onOpenChange: (open: boolean) => void
+  readonly activity: ActividadRow | null
 }
 
 const NO_GROUP = 'no-group'

@@ -26,10 +26,10 @@ type PerfilRow = Pick<Database['public']['Tables']['perfiles']['Row'], 'id' | 'n
 type InscripcionRow = Pick<Database['public']['Tables']['inscripciones']['Row'], 'id' | 'perfil_id' | 'monto' | 'metodo_pago' | 'url_voucher' | 'created_at'>
 
 interface InscriptionVoucherDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  perfil: PerfilRow | null
-  inscripcion?: InscripcionRow
+  readonly open: boolean
+  readonly onOpenChange: (open: boolean) => void
+  readonly perfil: PerfilRow | null
+  readonly inscripcion?: InscripcionRow
 }
 
 export function InscriptionVoucherDialog({ open, onOpenChange, perfil, inscripcion }: InscriptionVoucherDialogProps) {

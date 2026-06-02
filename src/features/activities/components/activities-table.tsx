@@ -4,6 +4,7 @@ import { es } from 'date-fns/locale'
 import { Trash2Icon, PencilIcon, DollarSignIcon, PlayIcon, EyeIcon, UndoIcon, UsersIcon } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
+import { getErrorMessage } from '@/lib/error-utils'
 import { useActivities, type ActividadRow } from '../api/use-activities'
 import { useSWRConfig } from 'swr'
 
@@ -34,6 +35,19 @@ const CreateActivityDialog = lazy(() => import('./create-activity-dialog').then(
 const EditActivityDialog = lazy(() => import('./edit-activity-dialog').then(m => ({ default: m.EditActivityDialog as React.ComponentType<{ open: boolean; onOpenChange: (open: boolean) => void; activity: ActividadRow }> })))
 const FinalizeActivityDialog = lazy(() => import('./finalize-activity-dialog').then(m => ({ default: m.FinalizeActivityDialog as React.ComponentType<{ open: boolean; onOpenChange: (open: boolean) => void; activity: ActividadRow }> })))
 
+const MOBILE_SKELETON_KEYS = ['mobile-activity-1', 'mobile-activity-2', 'mobile-activity-3']
+const TABLE_SKELETON_KEYS = ['table-activity-1', 'table-activity-2', 'table-activity-3', 'table-activity-4']
+
+function getActivityStatusClass(status: ActividadRow['estado']) {
+  if (status === 'Finalizada') {
+    return "bg-emerald-500/10 text-emerald-600 border-emerald-500/30 dark:text-emerald-400"
+  }
+  if (status === 'En curso') {
+    return "bg-blue-500/10 text-blue-600 border-blue-500/30 dark:text-blue-400"
+  }
+  return "bg-muted text-muted-foreground border-border/50"
+}
+
 export function ActivitiesTable() {
   const { data, isLoading, error, deleteActivity, updateActivity, revertActivity } = useActivities()
   const { mutate } = useSWRConfig()
@@ -49,8 +63,8 @@ export function ActivitiesTable() {
     try {
       await updateActivity(id, { estado: 'En curso' })
       toast.success('Actividad iniciada')
-    } catch (e) {
-      toast.error('Error al iniciar la actividad')
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, 'Error al iniciar la actividad'))
     } finally {
       setIsUpdating(null)
     }
@@ -65,8 +79,8 @@ export function ActivitiesTable() {
       mutate('api/expenses')
       mutate('api/payments')
       mutate('api/payments-matrix')
-    } catch (e) {
-      toast.error('Error al revertir la actividad')
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, 'Error al revertir la actividad'))
     } finally {
       setIsUpdating(null)
     }
@@ -85,8 +99,8 @@ export function ActivitiesTable() {
       mutate('api/payments')
       mutate('api/payments-matrix')
       setActivityToDelete(null)
-    } catch (err: unknown) {
-      toast.error('Error al eliminar la actividad')
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, 'Error al eliminar la actividad'))
     } finally {
       setIsDeleting(false)
     }
@@ -130,8 +144,8 @@ export function ActivitiesTable() {
       {/* MOBILE CARD VIEW */}
       <div className="block sm:hidden space-y-2">
         {isLoading ? (
-          Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="rounded-xl border bg-card p-4 space-y-3">
+          MOBILE_SKELETON_KEYS.map((key) => (
+            <div key={key} className="rounded-xl border bg-card p-4 space-y-3">
               <Skeleton className="h-5 w-40" />
               <Skeleton className="h-4 w-24" />
               <Skeleton className="h-2 w-full" />
@@ -165,11 +179,7 @@ export function ActivitiesTable() {
                   variant="outline"
                   className={cn(
                     "shrink-0 text-xs",
-                    act.estado === 'Finalizada'
-                      ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/30 dark:text-emerald-400"
-                      : act.estado === 'En curso'
-                      ? "bg-blue-500/10 text-blue-600 border-blue-500/30 dark:text-blue-400"
-                      : "bg-muted text-muted-foreground border-border/50"
+                    getActivityStatusClass(act.estado)
                   )}
                 >
                   {act.estado}
@@ -275,8 +285,8 @@ export function ActivitiesTable() {
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              Array.from({ length: 4 }).map((_, i) => (
-                <TableRow key={i}>
+              TABLE_SKELETON_KEYS.map((key) => (
+                <TableRow key={key}>
                   <TableCell><Skeleton className="h-5 w-40" /></TableCell>
                   <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                   <TableCell className="text-center"><Skeleton className="h-5 w-16 mx-auto" /></TableCell>
@@ -313,11 +323,7 @@ export function ActivitiesTable() {
                     <Badge
                       variant="outline"
                       className={cn(
-                        act.estado === 'Finalizada'
-                          ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/30 dark:text-emerald-400"
-                          : act.estado === 'En curso'
-                          ? "bg-blue-500/10 text-blue-600 border-blue-500/30 dark:text-blue-400"
-                          : "bg-muted text-muted-foreground border-border/50"
+                        getActivityStatusClass(act.estado)
                       )}
                     >
                       {act.estado}

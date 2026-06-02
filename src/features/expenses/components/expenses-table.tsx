@@ -45,6 +45,23 @@ import {
 
 type CategoriaTab = 'all' | 'Productora' | 'Otros'
 
+const MOBILE_SKELETON_KEYS = ['mobile-expense-1', 'mobile-expense-2', 'mobile-expense-3']
+const TABLE_SKELETON_KEYS = ['table-expense-1', 'table-expense-2', 'table-expense-3', 'table-expense-4']
+
+function getBalanceColorClass(value: number) {
+  return value >= 0 ? "text-emerald-500" : "text-rose-500"
+}
+
+function getBalanceSymbolColorClass(value: number) {
+  return value >= 0 ? "text-emerald-500/70" : "text-rose-500/70"
+}
+
+function getCategoryClass(category: EgresoRow['categoria']) {
+  return category === 'Productora'
+    ? "bg-blue-500/10 text-blue-600 border-blue-500/30 dark:text-blue-400"
+    : "bg-muted text-muted-foreground border-border/50"
+}
+
 function getPaymentStatus(totalPaid: number, isFullyPaid: boolean) {
   if (isFullyPaid) return 'Pagado'
   return totalPaid > 0 ? 'Parcial' : 'Pendiente'
@@ -105,6 +122,7 @@ export function ExpensesTable() {
   }
 
   const stats = data?.stats
+  const saldoDisponible = stats?.saldoDisponible ?? 0
 
   return (
     <div className="space-y-6">
@@ -119,8 +137,8 @@ export function ExpensesTable() {
             {isLoading ? (
               <Skeleton className="h-7 w-28" />
             ) : (
-              <div className={cn("text-2xl font-bold tabular-nums", (stats?.saldoDisponible ?? 0) >= 0 ? "text-emerald-500" : "text-rose-500")}>
-                <span className={cn("text-xs sm:text-lg font-medium mr-1", (stats?.saldoDisponible ?? 0) >= 0 ? "text-emerald-500/70" : "text-rose-500/70")}>S/</span>
+              <div className={cn("text-2xl font-bold tabular-nums", getBalanceColorClass(saldoDisponible))}>
+                <span className={cn("text-xs sm:text-lg font-medium mr-1", getBalanceSymbolColorClass(saldoDisponible))}>S/</span>
                 {(stats?.saldoDisponible ?? 0).toLocaleString('es-PE', { minimumFractionDigits: 2 })}
               </div>
             )}
@@ -205,8 +223,8 @@ export function ExpensesTable() {
       {/* MOBILE CARD VIEW */}
       <div className="block sm:hidden space-y-2">
         {isLoading ? (
-          Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="rounded-xl border bg-card p-4 space-y-3">
+          MOBILE_SKELETON_KEYS.map((key) => (
+            <div key={key} className="rounded-xl border bg-card p-4 space-y-3">
               <Skeleton className="h-5 w-40" />
               <Skeleton className="h-4 w-24" />
               <Skeleton className="h-2 w-full" />
@@ -334,8 +352,8 @@ export function ExpensesTable() {
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              Array.from({ length: 4 }).map((_, i) => (
-                <TableRow key={i}>
+              TABLE_SKELETON_KEYS.map((key) => (
+                <TableRow key={key}>
                   <TableCell><Skeleton className="h-5 w-40" /></TableCell>
                   <TableCell><Skeleton className="h-5 w-20" /></TableCell>
                   <TableCell className="text-right"><Skeleton className="h-5 w-16 ml-auto" /></TableCell>
@@ -377,9 +395,7 @@ export function ExpensesTable() {
                       <Badge
                         variant="outline"
                         className={cn(
-                          egreso.categoria === 'Productora' 
-                            ? "bg-blue-500/10 text-blue-600 border-blue-500/30 dark:text-blue-400" 
-                            : "bg-muted text-muted-foreground border-border/50"
+                          getCategoryClass(egreso.categoria)
                         )}
                       >
                         {egreso.categoria === 'Productora' ? 'RG Prod.' : 'Otros'}

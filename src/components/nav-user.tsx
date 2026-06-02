@@ -37,10 +37,10 @@ import { useAuth } from "@/hooks/use-auth"
 export function NavUser({
   user,
 }: {
-  user: {
-    name: string
-    email: string
-    avatar: string
+  readonly user: {
+    readonly name: string
+    readonly email: string
+    readonly avatar: string
   }
 }) {
   const { isMobile } = useSidebar()
@@ -191,7 +191,13 @@ export function NavUser({
       <Dialog open={showProfile} onOpenChange={setShowProfile}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader className="items-center pb-4 text-center">
-            <div className="relative group cursor-pointer" onClick={() => !isUploading && fileInputRef.current?.click()}>
+            <button
+              type="button"
+              className="relative group cursor-pointer"
+              onClick={() => !isUploading && fileInputRef.current?.click()}
+              disabled={isUploading}
+              aria-label="Cambiar foto de perfil"
+            >
               <Avatar className="size-24 border-4 border-background shadow-xl transition-all group-hover:brightness-50 group-hover:scale-105">
                 <AvatarImage src={user.avatar} alt={user.name} />
                 <AvatarFallback className="text-4xl">
@@ -205,7 +211,7 @@ export function NavUser({
                   <CameraIcon className="size-8 text-white" />
                 )}
               </div>
-            </div>
+            </button>
             <DialogTitle className="mt-4 text-2xl font-bold tracking-tight">
               {user.name}
             </DialogTitle>

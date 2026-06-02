@@ -23,9 +23,9 @@ import { DatePicker } from '@/components/ui/date-picker'
 import type { EgresoRow } from '../api/use-expenses'
 
 interface EditExpenseDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  egreso: EgresoRow | null
+  readonly open: boolean
+  readonly onOpenChange: (open: boolean) => void
+  readonly egreso: EgresoRow | null
 }
 
 export function EditExpenseDialog({ open, onOpenChange, egreso }: EditExpenseDialogProps) {
