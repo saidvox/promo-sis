@@ -1,5 +1,7 @@
 import { useDashboardStats } from '@/features/payments/api/use-dashboard-stats'
 import { usePayments } from '@/features/payments/api/use-payments'
+import { useRecentAuditLogs } from '@/features/audit/api/audit-events'
+import { formatAuditDate, getMetadataValue } from '@/features/audit/utils/audit-format'
 import {
   Card,
   CardContent,
@@ -40,6 +42,7 @@ function getPaymentBadgeClass(status: string) {
 export function DashboardPage() {
   const { data: stats, isLoading: isStatsLoading, error: statsError } = useDashboardStats()
   const { data: payments, isLoading: isPaymentsLoading, error: paymentsError } = usePayments()
+  const { data: recentAuditLogs, isLoading: isAuditLoading } = useRecentAuditLogs(8)
 
   const progressPercentage = stats ? Math.min((stats.totalIncome / GOAL_AMOUNT) * 100, 100) : 0
 
@@ -177,12 +180,21 @@ export function DashboardPage() {
                     const paymentStatus = pago.estado ?? 'Pendiente'
                     const paymentVariant = getPaymentBadgeVariant(paymentStatus)
                     const paymentClassName = getPaymentBadgeClass(paymentStatus)
+                    const paymentActor = recentAuditLogs?.find((log) =>
+                      (log.entity_type === 'pago' && log.entity_id === pago.id) ||
+                      String(getMetadataValue(log.metadata, 'pago_id') ?? '') === pago.id
+                    )
 
                     return (
                     <TableRow key={pago.id}>
                       <TableCell>
                         <div className="font-medium text-sm leading-tight">{pago.perfil?.nombre_completo}</div>
                         <div className="text-xs text-muted-foreground">{pago.perfil?.codigo_u}</div>
+                        {paymentActor && (
+                          <div className="mt-1 text-[11px] text-muted-foreground">
+                            Registrado por @{paymentActor.actor_username}
+                          </div>
+                        )}
                         {pago.created_at && (
                           <div className="mt-1 text-[11px] text-muted-foreground md:hidden">
                             {format(new Date(pago.created_at), 'd MMM yyyy, HH:mm', { locale: es })}
@@ -311,6 +323,40 @@ export function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader className="px-4 sm:px-6">
+          <CardTitle>Actividad reciente</CardTitle>
+          <CardDescription>Ultimas acciones criticas registradas por auditoria.</CardDescription>
+        </CardHeader>
+        <CardContent className="px-4 sm:px-6">
+          {isAuditLoading ? (
+            <div className="space-y-3">
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+            </div>
+          ) : recentAuditLogs?.length ? (
+            <div className="divide-y divide-border/60">
+              {recentAuditLogs.slice(0, 5).map((log) => (
+                <div key={log.id} className="flex flex-col gap-1 py-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium">{log.summary}</p>
+                    <p className="text-xs text-muted-foreground">@{log.actor_username} · {log.entity_type}</p>
+                  </div>
+                  <span className="shrink-0 text-xs text-muted-foreground">
+                    {formatAuditDate(log.created_at)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
+              Aun no hay actividad auditada.
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   )
 }

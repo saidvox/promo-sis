@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react"
 
-export type PageView = "dashboard" | "students" | "payments" | "expenses" | "activities" | "settings"
+export type PageView = "dashboard" | "students" | "payments" | "expenses" | "activities" | "settings" | "audit"
 
 interface NavigationContextType {
   currentPage: PageView
@@ -16,6 +16,7 @@ const VALID_PAGES = new Set<PageView>([
   "expenses",
   "activities",
   "settings",
+  "audit",
 ])
 
 function getPageFromHash(hash: string): PageView {

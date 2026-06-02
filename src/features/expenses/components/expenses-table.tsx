@@ -8,6 +8,8 @@ import { getErrorMessage } from '@/lib/error-utils'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { useExpenses, type EgresoRow, type EgresoWithAbonos } from '../api/use-expenses'
+import { recordAuditEvent } from '@/features/audit/api/audit-events'
+import { toAuditJson } from '@/features/audit/utils/audit-format'
 const CreateExpenseDialog = lazy(() => import('./create-expense-dialog').then(m => ({ default: m.CreateExpenseDialog })))
 const PayExpenseDialog = lazy(() => import('./pay-expense-dialog').then(m => ({ default: m.PayExpenseDialog })))
 const EditExpenseDialog = lazy(() => import('./edit-expense-dialog').then(m => ({ default: m.EditExpenseDialog })))
@@ -94,6 +96,18 @@ export function ExpensesTable() {
     try {
       const { error } = await supabase.from('egresos').delete().eq('id', egresoToDelete.id)
       if (error) throw error
+      await recordAuditEvent({
+        action: 'expense.deleted',
+        entityType: 'egreso',
+        entityId: egresoToDelete.id,
+        summary: `Elimino egreso ${egresoToDelete.concepto}`,
+        metadata: {
+          concepto: egresoToDelete.concepto,
+          monto: egresoToDelete.monto,
+          categoria: egresoToDelete.categoria,
+        },
+        beforeData: toAuditJson(egresoToDelete),
+      })
       
       toast.success('Egreso eliminado')
       mutate('api/expenses')

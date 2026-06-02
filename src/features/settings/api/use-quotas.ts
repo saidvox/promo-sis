@@ -1,6 +1,8 @@
 import useSWR from 'swr'
 import { supabase } from '@/lib/supabase/client'
 import type { Database } from '@/types/database.types'
+import { recordAuditEvent } from '@/features/audit/api/audit-events'
+import { toAuditJson } from '@/features/audit/utils/audit-format'
 
 export type ConfigCuota = Database['public']['Tables']['config_cuotas']['Row']
 
@@ -34,18 +36,39 @@ export function useQuotas() {
     const existing = data?.find((q) => q.mes_nombre === mes_nombre)
 
     if (existing) {
+      const payload = { monto, fecha_vencimiento, updated_at: new Date().toISOString() }
       const { error } = await supabase
         .from('config_cuotas')
-        .update({ monto, fecha_vencimiento, updated_at: new Date().toISOString() })
+        .update(payload)
         .eq('id', existing.id)
       
       if (error) throw error
+      await recordAuditEvent({
+        action: 'quota.updated',
+        entityType: 'config_cuota',
+        entityId: existing.id,
+        summary: `Edito cuota ${mes_nombre} a S/ ${monto.toFixed(2)}`,
+        metadata: { mes_nombre, monto, fecha_vencimiento },
+        beforeData: toAuditJson(existing),
+        afterData: toAuditJson(payload),
+      })
     } else {
-      const { error } = await supabase
+      const payload = { mes_nombre, monto, fecha_vencimiento }
+      const { data: newQuota, error } = await supabase
         .from('config_cuotas')
-        .insert({ mes_nombre, monto, fecha_vencimiento })
+        .insert(payload)
+        .select('id')
+        .single()
       
       if (error) throw error
+      await recordAuditEvent({
+        action: 'quota.created',
+        entityType: 'config_cuota',
+        entityId: newQuota.id,
+        summary: `Creo cuota ${mes_nombre} por S/ ${monto.toFixed(2)}`,
+        metadata: { mes_nombre, monto, fecha_vencimiento },
+        afterData: toAuditJson(payload),
+      })
     }
 
     // Invalidar caché para forzar refresco del módulo matriz también
@@ -56,6 +79,7 @@ export function useQuotas() {
   }
 
   const deleteQuota = async (id: string) => {
+    const existing = data?.find((quota) => quota.id === id)
     // Alarma: borrar configuración de un mes podría violar FK constraints si ya tiene pagos.
     // Solo permitir si no tiene pagos.
     const { error } = await supabase
@@ -64,6 +88,14 @@ export function useQuotas() {
       .eq('id', id)
       
     if (error) throw error
+    await recordAuditEvent({
+      action: 'quota.deleted',
+      entityType: 'config_cuota',
+      entityId: id,
+      summary: `Elimino cuota ${existing?.mes_nombre ?? id}`,
+      metadata: { mes_nombre: existing?.mes_nombre ?? null },
+      beforeData: toAuditJson(existing ?? { id }),
+    })
     await mutate()
     import('swr').then(m => m.mutate('api/payments-matrix'))
   }

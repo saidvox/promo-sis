@@ -27,6 +27,8 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { toast } from 'sonner'
+import { recordAuditEvent } from '@/features/audit/api/audit-events'
+import { toAuditJson } from '@/features/audit/utils/audit-format'
 
 interface EditParticipantDialogProps {
   readonly participant: Perfil
@@ -88,19 +90,34 @@ export function EditParticipantDialog({ participant }: EditParticipantDialogProp
     setIsSubmitting(true)
 
     try {
+      const payload = {
+        dni: dni || null,
+        codigo_u: codigoU,
+        nombre_completo: nombre,
+        rol,
+        telefono: telefono || null,
+        activo,
+      }
       const { error } = await supabase
         .from('perfiles')
-        .update({
-          dni: dni || null,
-          codigo_u: codigoU,
-          nombre_completo: nombre,
-          rol,
-          telefono: telefono || null,
-          activo,
-        })
+        .update(payload)
         .eq('id', participant.id)
 
       if (error) throw error
+      await recordAuditEvent({
+        action: 'participant.updated',
+        entityType: 'perfil',
+        entityId: participant.id,
+        summary: `Edito participante ${participant.nombre_completo}`,
+        metadata: {
+          codigo_u: codigoU,
+          nombre_completo: nombre,
+          rol,
+          activo,
+        },
+        beforeData: toAuditJson(participant),
+        afterData: toAuditJson(payload),
+      })
 
       toast.success('Información actualizada correctamente')
       

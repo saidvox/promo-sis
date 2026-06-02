@@ -27,6 +27,8 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { toast } from 'sonner'
+import { recordAuditEvent } from '@/features/audit/api/audit-events'
+import { toAuditJson } from '@/features/audit/utils/audit-format'
 
 export function CreateParticipantDialog({ className }: { readonly className?: string }) {
   const [open, setOpen] = useState(false)
@@ -83,18 +85,33 @@ export function CreateParticipantDialog({ className }: { readonly className?: st
     setIsSubmitting(true)
 
     try {
-      const { error } = await supabase
+      const payload = {
+        dni: dni || null,
+        codigo_u: codigoU,
+        nombre_completo: nombre,
+        rol,
+        telefono: telefono || null,
+        activo,
+      }
+      const { data: participant, error } = await supabase
         .from('perfiles')
-        .insert({
-          dni: dni || null,
+        .insert(payload)
+        .select('id')
+        .single()
+
+      if (error) throw error
+      await recordAuditEvent({
+        action: 'participant.created',
+        entityType: 'perfil',
+        entityId: participant.id,
+        summary: `Registro participante ${nombre}`,
+        metadata: {
           codigo_u: codigoU,
           nombre_completo: nombre,
           rol,
-          telefono: telefono || null,
-          activo,
-        })
-
-      if (error) throw error
+        },
+        afterData: toAuditJson(payload),
+      })
 
       toast.success('Participante registrado exitosamente')
       

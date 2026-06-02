@@ -28,6 +28,8 @@ import { useSWRConfig } from 'swr'
 import { supabase } from '@/lib/supabase/client'
 import { useStudents, type Perfil } from '@/features/students/api/use-students'
 import { getRoleColor } from '@/features/students/utils/get-role-color'
+import { recordAuditEvent } from '@/features/audit/api/audit-events'
+import { toAuditJson } from '@/features/audit/utils/audit-format'
 const CreateParticipantDialog = lazy(() => import('./create-participant-dialog').then(m => ({ default: m.CreateParticipantDialog })))
 const EditParticipantDialog = lazy(() => import('./edit-participant-dialog').then(m => ({ default: m.EditParticipantDialog })))
 
@@ -95,6 +97,18 @@ export function ParticipantsTable() {
         .eq('id', participantToDelete.id)
 
       if (error) throw error
+      await recordAuditEvent({
+        action: 'participant.deleted',
+        entityType: 'perfil',
+        entityId: participantToDelete.id,
+        summary: `Elimino participante ${participantToDelete.nombre_completo}`,
+        metadata: {
+          codigo_u: participantToDelete.codigo_u,
+          nombre_completo: participantToDelete.nombre_completo,
+          rol: participantToDelete.rol,
+        },
+        beforeData: toAuditJson(participantToDelete),
+      })
       
       toast.success('Participante eliminado correctamente')
       mutate('api/students')

@@ -1,6 +1,8 @@
 import useSWR from 'swr'
 import { supabase } from '@/lib/supabase/client'
 import type { Database } from '@/types/database.types'
+import { recordAuditEvent } from '@/features/audit/api/audit-events'
+import { toAuditJson } from '@/features/audit/utils/audit-format'
 
 export type ActividadRow = Database['public']['Tables']['actividades']['Row']
 export type ActividadInsert = Database['public']['Tables']['actividades']['Insert']
@@ -100,6 +102,18 @@ export const useActivities = () => {
       .single()
 
     if (error) throw error
+    await recordAuditEvent({
+      action: 'activity.created',
+      entityType: 'actividad',
+      entityId: newActivity.id,
+      summary: `Creo actividad ${newActivity.nombre}`,
+      metadata: {
+        nombre: newActivity.nombre,
+        estado: newActivity.estado,
+        fecha_evento: newActivity.fecha_evento,
+      },
+      afterData: toAuditJson(newActivity),
+    })
     await mutate()
     return newActivity
   }
@@ -113,17 +127,38 @@ export const useActivities = () => {
       .single()
 
     if (error) throw error
+    await recordAuditEvent({
+      action: 'activity.updated',
+      entityType: 'actividad',
+      entityId: id,
+      summary: `Edito actividad ${updatedActivity.nombre}`,
+      metadata: {
+        nombre: updatedActivity.nombre,
+        estado: updatedActivity.estado,
+        fecha_evento: updatedActivity.fecha_evento,
+      },
+      afterData: toAuditJson(updatedActivity),
+    })
     await mutate()
     return updatedActivity
   }
 
   const deleteActivity = async (id: string) => {
+    const existing = data?.actividades.find((activity) => activity.id === id)
     const { error } = await supabase
       .from('actividades')
       .delete()
       .eq('id', id)
 
     if (error) throw error
+    await recordAuditEvent({
+      action: 'activity.deleted',
+      entityType: 'actividad',
+      entityId: id,
+      summary: `Elimino actividad ${existing?.nombre ?? id}`,
+      metadata: { nombre: existing?.nombre ?? null },
+      beforeData: toAuditJson(existing ?? { id }),
+    })
     await mutate()
   }
 
@@ -159,13 +194,23 @@ export const useActivities = () => {
 
     if (resetParticipantsRes.error) throw resetParticipantsRes.error
 
-    await updateActivity(id, {
+    const revertedActivity = await updateActivity(id, {
       estado: 'En curso',
       monto_recaudado: 0,
       total_bruto: 0,
       total_promocion: 0,
       total_beneficio: 0,
       total_premios_externos: 0,
+    })
+    await recordAuditEvent({
+      action: 'activity.reverted',
+      entityType: 'actividad',
+      entityId: id,
+      summary: `Revirtio actividad ${revertedActivity.nombre}`,
+      metadata: {
+        movimientos_revertidos: movimientosRes.data?.length ?? 0,
+      },
+      afterData: toAuditJson(revertedActivity),
     })
   }
 

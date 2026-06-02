@@ -41,6 +41,8 @@ import {
   uploadInscriptionVoucher,
   validateInscriptionVoucherFile,
 } from '../utils/inscription-vouchers'
+import { recordAuditEvent } from '@/features/audit/api/audit-events'
+import { toAuditJson } from '@/features/audit/utils/audit-format'
 
 function renderStudentSelectionLabel(isLoading: boolean, selectedStudent?: Perfil) {
   if (isLoading) {
@@ -108,17 +110,31 @@ export function CreateInscripcionDialog({ className }: { readonly className?: st
         uploadedVoucherPath = await uploadInscriptionVoucher(perfilId, inscripcionId, voucherFile)
       }
 
+      const payload = {
+        id: inscripcionId,
+        perfil_id: perfilId,
+        monto: 100.0,
+        metodo_pago: metodoPago,
+        url_voucher: uploadedVoucherPath,
+      }
       const { error } = await supabase
         .from('inscripciones')
-        .insert({
-          id: inscripcionId,
-          perfil_id: perfilId,
-          monto: 100.0,
-          metodo_pago: metodoPago,
-          url_voucher: uploadedVoucherPath,
-        })
+        .insert(payload)
 
       if (error) throw error
+      await recordAuditEvent({
+        action: 'inscription.created',
+        entityType: 'inscripcion',
+        entityId: inscripcionId,
+        summary: `Registro inscripcion de ${selectedStudent?.nombre_completo ?? 'estudiante'} por S/ 100.00`,
+        metadata: {
+          perfil_id: perfilId,
+          perfil_nombre: selectedStudent?.nombre_completo ?? null,
+          metodo_pago: metodoPago,
+          voucher: Boolean(uploadedVoucherPath),
+        },
+        afterData: toAuditJson(payload),
+      })
 
       toast.success('Inscripción registrada correctamente', {
         description: 'El alumno ha sido desbloqueado en la Sabana de Pagos.',

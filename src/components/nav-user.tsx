@@ -28,11 +28,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { EllipsisVerticalIcon, CircleUserRoundIcon, LogOutIcon, UserIcon, ShieldIcon, MailIcon, CameraIcon, Loader2Icon } from "lucide-react"
+import { EllipsisVerticalIcon, CircleUserRoundIcon, LogOutIcon, UserIcon, ShieldIcon, MailIcon, CameraIcon, Loader2Icon, ActivityIcon } from "lucide-react"
 import { supabase } from "@/lib/supabase/client"
 import { getErrorMessage } from "@/lib/error-utils"
 import { toast } from "sonner"
 import { useAuth } from "@/hooks/use-auth"
+import { useNavigation } from "@/hooks/use-navigation"
+import { recordAuditEvent } from "@/features/audit/api/audit-events"
 
 export function NavUser({
   user,
@@ -45,6 +47,7 @@ export function NavUser({
 }) {
   const { isMobile } = useSidebar()
   const { session, profile, refreshProfile } = useAuth()
+  const { navigate } = useNavigation()
   const [showProfile, setShowProfile] = useState(false)
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
@@ -102,6 +105,15 @@ export function NavUser({
         .eq('id', session.user.id)
 
       if (updateError) throw updateError
+
+      await recordAuditEvent({
+        action: 'profile.avatar_updated',
+        entityType: 'perfil',
+        entityId: session.user.id,
+        summary: `${profile?.nombre_completo ?? user.name} actualizo su foto de perfil`,
+        metadata: { avatar_url: publicUrl },
+        afterData: { avatar_url: publicUrl },
+      })
 
       toast.success('¡Foto de perfil actualizada!')
       if (refreshProfile) refreshProfile()
@@ -166,6 +178,10 @@ export function NavUser({
                 <DropdownMenuItem onClick={() => setShowProfile(true)}>
                   <CircleUserRoundIcon />
                   Mi Cuenta
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate('audit')}>
+                  <ActivityIcon />
+                  Auditoría
                 </DropdownMenuItem>
               </DropdownMenuGroup>
               <DropdownMenuSeparator />

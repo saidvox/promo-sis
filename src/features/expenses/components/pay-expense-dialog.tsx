@@ -19,6 +19,8 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { DatePicker } from '@/components/ui/date-picker'
+import { recordAuditEvent } from '@/features/audit/api/audit-events'
+import { toAuditJson } from '@/features/audit/utils/audit-format'
 
 import type { EgresoWithAbonos } from '../api/use-expenses'
 
@@ -157,6 +159,20 @@ export function PayExpenseDialog({ open, onOpenChange, egreso, saldoDisponible }
         .eq('id', egreso.id)
 
       if (statusError) throw statusError
+      await recordAuditEvent({
+        action: 'expense.payment_created',
+        entityType: 'abono_egreso',
+        entityId: movementId,
+        summary: `Registro pago de egreso S/ ${montoAbonoNum.toFixed(2)} para ${egreso.concepto}`,
+        metadata: {
+          egreso_id: egreso.id,
+          concepto: egreso.concepto,
+          monto: montoAbonoNum,
+          estado_resultante: nuevoEstado,
+          voucher: Boolean(voucherData),
+        },
+        afterData: toAuditJson(abonoData),
+      })
 
       toast.success(nuevoTotalPagado >= egreso.monto ? 'Egreso liquidado por completo' : 'Abono registrado correctamente')
       mutate('api/expenses')

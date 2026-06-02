@@ -255,6 +255,59 @@ export type Database = {
         }
         Relationships: []
       }
+      audit_logs: {
+        Row: {
+          action: string
+          actor_display_name: string
+          actor_id: string
+          actor_username: string
+          after_data: Json | null
+          before_data: Json | null
+          created_at: string
+          entity_id: string | null
+          entity_type: string
+          id: string
+          metadata: Json
+          summary: string
+        }
+        Insert: {
+          action: string
+          actor_display_name?: string
+          actor_id?: string
+          actor_username?: string
+          after_data?: Json | null
+          before_data?: Json | null
+          created_at?: string
+          entity_id?: string | null
+          entity_type: string
+          id?: string
+          metadata?: Json
+          summary: string
+        }
+        Update: {
+          action?: string
+          actor_display_name?: string
+          actor_id?: string
+          actor_username?: string
+          after_data?: Json | null
+          before_data?: Json | null
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+          metadata?: Json
+          summary?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_logs_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "perfiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       config_cuotas: {
         Row: {
           activo: boolean | null
@@ -540,6 +593,7 @@ export type Database = {
           rol: Database["public"]["Enums"]["user_role"] | null
           telefono: string | null
           updated_at: string | null
+          username: string | null
         }
         Insert: {
           activo?: boolean
@@ -552,6 +606,7 @@ export type Database = {
           rol?: Database["public"]["Enums"]["user_role"] | null
           telefono?: string | null
           updated_at?: string | null
+          username?: string | null
         }
         Update: {
           activo?: boolean
@@ -564,6 +619,7 @@ export type Database = {
           rol?: Database["public"]["Enums"]["user_role"] | null
           telefono?: string | null
           updated_at?: string | null
+          username?: string | null
         }
         Relationships: []
       }

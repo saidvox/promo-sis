@@ -22,6 +22,8 @@ import {
 
 import { DatePicker } from '@/components/ui/date-picker'
 import { cn } from '@/lib/utils'
+import { recordAuditEvent } from '@/features/audit/api/audit-events'
+import { toAuditJson } from '@/features/audit/utils/audit-format'
 
 export function CreateExpenseDialog({ className }: { readonly className?: string }) {
   const [open, setOpen] = useState(false)
@@ -85,7 +87,7 @@ export function CreateExpenseDialog({ className }: { readonly className?: string
     setIsSubmitting(true)
 
     try {
-      const { error } = await supabase.from('egresos').insert({
+      const payload = {
         concepto: concepto.trim(),
         descripcion: descripcion.trim() || null,
         categoria,
@@ -94,9 +96,26 @@ export function CreateExpenseDialog({ className }: { readonly className?: string
         actividad_id: actividadId === 'none' ? null : actividadId,
         actividad_grupo_id: actividadGrupoId === 'none' ? null : actividadGrupoId,
         estado: 'Pendiente',
-      })
+      }
+      const { data: egresoCreado, error } = await supabase
+        .from('egresos')
+        .insert(payload)
+        .select('id')
+        .single()
 
       if (error) throw error
+      await recordAuditEvent({
+        action: 'expense.created',
+        entityType: 'egreso',
+        entityId: egresoCreado.id,
+        summary: `Registro egreso S/ ${Number(monto).toFixed(2)} por ${concepto.trim()}`,
+        metadata: {
+          concepto: concepto.trim(),
+          categoria,
+          monto: Number(monto),
+        },
+        afterData: toAuditJson(payload),
+      })
 
       toast.success('Egreso registrado correctamente')
       mutate('api/expenses')

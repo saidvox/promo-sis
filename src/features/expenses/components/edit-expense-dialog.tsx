@@ -19,6 +19,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { DatePicker } from '@/components/ui/date-picker'
+import { recordAuditEvent } from '@/features/audit/api/audit-events'
+import { toAuditJson } from '@/features/audit/utils/audit-format'
 
 import type { EgresoRow } from '../api/use-expenses'
 
@@ -61,19 +63,33 @@ export function EditExpenseDialog({ open, onOpenChange, egreso }: EditExpenseDia
     setIsSubmitting(true)
 
     try {
+      const payload = {
+        concepto: concepto.trim(),
+        descripcion: descripcion.trim() || null,
+        categoria,
+        monto: Number(monto),
+        fecha_programada: fechaProgramada || null,
+        updated_at: new Date().toISOString(),
+      }
       const { error } = await supabase
         .from('egresos')
-        .update({
-          concepto: concepto.trim(),
-          descripcion: descripcion.trim() || null,
-          categoria,
-          monto: Number(monto),
-          fecha_programada: fechaProgramada || null,
-          updated_at: new Date().toISOString(),
-        })
+        .update(payload)
         .eq('id', egreso.id)
 
       if (error) throw error
+      await recordAuditEvent({
+        action: 'expense.updated',
+        entityType: 'egreso',
+        entityId: egreso.id,
+        summary: `Edito egreso ${egreso.concepto}`,
+        metadata: {
+          concepto: payload.concepto,
+          monto: payload.monto,
+          categoria: payload.categoria,
+        },
+        beforeData: toAuditJson(egreso),
+        afterData: toAuditJson(payload),
+      })
 
       toast.success('Egreso actualizado correctamente')
       mutate('api/expenses')

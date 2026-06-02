@@ -6,6 +6,8 @@ import { useSWRConfig } from 'swr'
 import { supabase } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
+import { recordAuditEvent } from '@/features/audit/api/audit-events'
+import { toAuditJson } from '@/features/audit/utils/audit-format'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -117,6 +119,7 @@ export function CreatePaymentDialog({
     mutate('api/payments-matrix')
     mutate('api/dashboard-stats')
     mutate('api/expenses')
+    mutate((key) => Array.isArray(key) && String(key[0]).includes('audit'))
   }
 
   const uploadVoucher = async (movementId: string, file: File) => {
@@ -170,6 +173,22 @@ export function CreatePaymentDialog({
     if (previousPath) {
       await supabase.storage.from(VOUCHER_BUCKET).remove([previousPath])
     }
+
+    await recordAuditEvent({
+      action: 'payment.voucher_uploaded',
+      entityType: 'pago_movimiento',
+      entityId: movementId,
+      summary: `Adjunto voucher de pago para ${perfil.nombre_completo} (${cuota.mes_nombre})`,
+      metadata: {
+        perfil_id: perfil.id,
+        perfil_nombre: perfil.nombre_completo,
+        cuota_id: cuota.id,
+        cuota_mes: cuota.mes_nombre,
+        previous_voucher_path: previousPath ?? null,
+        voucher_path: voucherData.voucher_path,
+      },
+      afterData: toAuditJson(voucherData),
+    })
   }
 
   const handleUpdateMovementDate = async (movementId: string, newDateStr: string) => {
@@ -190,6 +209,19 @@ export function CreatePaymentDialog({
         .eq('id', movementId)
 
       if (error) throw error
+      await recordAuditEvent({
+        action: 'payment.date_updated',
+        entityType: 'pago_movimiento',
+        entityId: movementId,
+        summary: `Actualizo la fecha de abono de ${perfil.nombre_completo} (${cuota.mes_nombre})`,
+        metadata: {
+          perfil_id: perfil.id,
+          cuota_id: cuota.id,
+          cuota_mes: cuota.mes_nombre,
+        },
+        beforeData: toAuditJson({ created_at: movementObj.created_at }),
+        afterData: toAuditJson({ created_at: updatedCreatedAt }),
+      })
       toast.success('Fecha de abono actualizada')
       refreshPaymentData()
     } catch (error: any) {
@@ -212,6 +244,21 @@ export function CreatePaymentDialog({
       if (voucherPath) {
         await supabase.storage.from(VOUCHER_BUCKET).remove([voucherPath])
       }
+
+      await recordAuditEvent({
+        action: 'payment.manual_deleted',
+        entityType: 'pago_movimiento',
+        entityId: movement.id,
+        summary: `Elimino abono S/ ${Number(movement.monto).toFixed(2)} de ${perfil.nombre_completo} (${cuota.mes_nombre})`,
+        metadata: {
+          perfil_id: perfil.id,
+          cuota_id: cuota.id,
+          cuota_mes: cuota.mes_nombre,
+          monto: Number(movement.monto),
+          voucher_path: voucherPath ?? movement.voucher_path ?? null,
+        },
+        beforeData: toAuditJson(movement),
+      })
 
       toast.success('Abono eliminado correctamente')
       refreshPaymentData()
@@ -250,6 +297,20 @@ export function CreatePaymentDialog({
         })
 
       if (updateError) throw updateError
+
+      await recordAuditEvent({
+        action: 'payment.manual_updated',
+        entityType: 'pago_movimiento',
+        entityId: movement.id,
+        summary: `Edito abono de ${perfil.nombre_completo}: S/ ${montoAnterior.toFixed(2)} a S/ ${nuevoMonto.toFixed(2)}`,
+        metadata: {
+          perfil_id: perfil.id,
+          cuota_id: cuota.id,
+          cuota_mes: cuota.mes_nombre,
+        },
+        beforeData: toAuditJson({ monto: montoAnterior, nota: movement.nota }),
+        afterData: toAuditJson({ monto: nuevoMonto, nota: editNota }),
+      })
 
       toast.success('Abono actualizado correctamente')
       refreshPaymentData()
@@ -305,6 +366,27 @@ export function CreatePaymentDialog({
 
       if (error) throw error
       uploadedVoucherPath = null
+
+      await recordAuditEvent({
+        action: 'payment.manual_created',
+        entityType: 'pago_movimiento',
+        entityId: movementId,
+        summary: `Registro abono S/ ${incremento.toFixed(2)} para ${perfil.nombre_completo} (${cuota.mes_nombre})`,
+        metadata: {
+          pago_id: pagoExistente?.id ?? null,
+          perfil_id: perfil.id,
+          perfil_nombre: perfil.nombre_completo,
+          cuota_id: cuota.id,
+          cuota_mes: cuota.mes_nombre,
+          monto: incremento,
+          voucher: Boolean(voucherData),
+        },
+        afterData: toAuditJson({
+          monto: incremento,
+          created_at: customCreatedAt,
+          voucher: voucherData,
+        }),
+      })
 
       toast.success('Abono registrado correctamente')
       refreshPaymentData()
@@ -376,6 +458,21 @@ export function CreatePaymentDialog({
         ...voucherData,
       })
       uploadedVoucherPath = null
+
+      await recordAuditEvent({
+        action: 'payment.legacy_voucher_uploaded',
+        entityType: 'pago_movimiento',
+        entityId: movementId,
+        summary: `Adjunto voucher historico para ${perfil.nombre_completo} (${cuota.mes_nombre})`,
+        metadata: {
+          pago_id: pagoExistente.id,
+          perfil_id: perfil.id,
+          cuota_id: cuota.id,
+          cuota_mes: cuota.mes_nombre,
+          monto: totalPagado,
+        },
+        afterData: toAuditJson(voucherData),
+      })
 
       toast.success('Comprobante adjuntado al pago existente')
       refreshPaymentData()

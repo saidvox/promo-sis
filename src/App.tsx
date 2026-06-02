@@ -16,6 +16,8 @@ import { PaymentsPage } from '@/pages/payments-page'
 import { SettingsPage } from '@/pages/settings-page'
 import { StudentsPage } from '@/pages/students-page'
 import { ActivitiesPage } from '@/pages/activities-page'
+import { AuditPage } from '@/pages/audit-page'
+import { UsernameSetupPage } from '@/pages/username-setup-page'
 
 const PAGE_TITLES = {
   dashboard: 'Dashboard Principal',
@@ -24,6 +26,7 @@ const PAGE_TITLES = {
   expenses: 'Control de Egresos',
   activities: 'Actividades de Recaudacion',
   settings: 'Configuracion',
+  audit: 'Auditoria',
 } as const
 
 const swrViewConfig = {
@@ -52,6 +55,7 @@ function MainContent() {
         {currentPage === 'expenses' && <ExpensesPage />}
         {currentPage === 'activities' && <ActivitiesPage />}
         {currentPage === 'settings' && <SettingsPage />}
+        {currentPage === 'audit' && <AuditPage />}
       </SidebarInset>
     </SidebarProvider>
   )
@@ -66,7 +70,7 @@ function App() {
 }
 
 function AppContent() {
-  const { session, isInitializing } = useAuth()
+  const { session, profile, isInitializing } = useAuth()
 
   if (isInitializing) {
     return (
@@ -88,6 +92,17 @@ function AppContent() {
           <Toaster position="top-center" />
           {!session ? (
             <LoginPage />
+          ) : !profile ? (
+            <div className="flex min-h-screen items-center justify-center bg-background">
+              <div className="animate-pulse space-y-4 text-center">
+                <div className="mx-auto h-12 w-12 rounded-full bg-muted" />
+                <p className="font-medium tracking-tight text-muted-foreground">
+                  Preparando perfil...
+                </p>
+              </div>
+            </div>
+          ) : !profile.username ? (
+            <UsernameSetupPage />
           ) : (
             <NavigationProvider>
               <MainContent />
