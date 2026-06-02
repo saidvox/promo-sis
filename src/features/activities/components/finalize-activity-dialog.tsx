@@ -359,7 +359,7 @@ export function FinalizeActivityDialog({ open, onOpenChange, activity }: Finaliz
     }
 
     draftSaveTimerRef.current = setTimeout(() => {
-      void saveParticipantDraft()
+      saveParticipantDraft().catch(() => undefined)
     }, 700)
   }, [activity, isFinalized, isLoading, open, participants, saveParticipantDraft])
 
@@ -400,6 +400,15 @@ export function FinalizeActivityDialog({ open, onOpenChange, activity }: Finaliz
         (participant.perfil.codigo_u ?? '').toLowerCase().includes(query)
       )
       .slice(0, 6)
+  }
+
+  const updateGroupAssignSearch = (groupId: string, value: string) => {
+    setGroupAssignSearch((current) => ({ ...current, [groupId]: value }))
+  }
+
+  const assignParticipantToGroup = (profileId: string, groupId: string) => {
+    updateParticipant(profileId, { grupo_id: groupId })
+    updateGroupAssignSearch(groupId, '')
   }
 
   const saveGroups = async (syncLocalState = false) => {
@@ -688,7 +697,7 @@ export function FinalizeActivityDialog({ open, onOpenChange, activity }: Finaliz
         clearTimeout(draftSaveTimerRef.current)
         draftSaveTimerRef.current = null
       }
-      void saveParticipantDraft()
+      saveParticipantDraft().catch(() => undefined)
     }
 
     onOpenChange(nextOpen)
@@ -1064,7 +1073,7 @@ export function FinalizeActivityDialog({ open, onOpenChange, activity }: Finaliz
                         placeholder="Buscar integrante..."
                         value={groupAssignSearch[group.id] ?? ''}
                         onChange={(event) =>
-                          setGroupAssignSearch((current) => ({ ...current, [group.id]: event.target.value }))
+                          updateGroupAssignSearch(group.id, event.target.value)
                         }
                         disabled={isFinalized || isSavingGroups}
                       />
@@ -1077,10 +1086,7 @@ export function FinalizeActivityDialog({ open, onOpenChange, activity }: Finaliz
                           key={participant.perfil.id}
                           type="button"
                           className="flex items-center justify-between rounded-md border bg-background px-3 py-2 text-left text-sm transition-colors hover:bg-muted"
-                          onClick={() => {
-                            updateParticipant(participant.perfil.id, { grupo_id: group.id })
-                            setGroupAssignSearch((current) => ({ ...current, [group.id]: '' }))
-                          }}
+                          onClick={() => assignParticipantToGroup(participant.perfil.id, group.id)}
                           disabled={isFinalized || isSavingGroups}
                         >
                           <span className="min-w-0">

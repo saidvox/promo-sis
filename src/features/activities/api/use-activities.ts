@@ -13,6 +13,46 @@ export type ActivityStats = {
   totalEnCurso: number
 }
 
+type ActivityBenefitMovement = {
+  pago_id: string | null
+  monto: number
+}
+
+async function revertPaymentMovement(movement: ActivityBenefitMovement) {
+  if (!movement.pago_id) return
+
+  const pagoRes = await supabase
+    .from('pagos')
+    .select('id, monto_pagado, config_cuotas(monto)')
+    .eq('id', movement.pago_id)
+    .single()
+
+  if (pagoRes.error) throw pagoRes.error
+
+  const cuota = Array.isArray(pagoRes.data.config_cuotas)
+    ? pagoRes.data.config_cuotas[0]
+    : pagoRes.data.config_cuotas
+  const nextAmount = Math.max(0, Number(pagoRes.data.monto_pagado) - Number(movement.monto))
+  const nextState = nextAmount >= Number(cuota?.monto ?? 0) ? 'Pagado' : 'Pendiente'
+
+  if (nextAmount <= 0) {
+    const { error } = await supabase.from('pagos').delete().eq('id', movement.pago_id)
+    if (error) throw error
+    return
+  }
+
+  const { error } = await supabase
+    .from('pagos')
+    .update({
+      monto_pagado: nextAmount,
+      estado: nextState,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', movement.pago_id)
+
+  if (error) throw error
+}
+
 /**
  * Hook para actividades con métricas de recaudación.
  */
@@ -97,37 +137,7 @@ export const useActivities = () => {
     if (movimientosRes.error) throw movimientosRes.error
 
     for (const movimiento of movimientosRes.data ?? []) {
-      if (!movimiento.pago_id) continue
-
-      const pagoRes = await supabase
-        .from('pagos')
-        .select('id, monto_pagado, config_cuotas(monto)')
-        .eq('id', movimiento.pago_id)
-        .single()
-
-      if (pagoRes.error) throw pagoRes.error
-
-      const cuota = Array.isArray(pagoRes.data.config_cuotas)
-        ? pagoRes.data.config_cuotas[0]
-        : pagoRes.data.config_cuotas
-      const nextAmount = Math.max(0, Number(pagoRes.data.monto_pagado) - Number(movimiento.monto))
-      const nextState = nextAmount >= Number(cuota?.monto ?? 0) ? 'Pagado' : 'Pendiente'
-
-      if (nextAmount <= 0) {
-        const { error } = await supabase.from('pagos').delete().eq('id', movimiento.pago_id)
-        if (error) throw error
-      } else {
-        const { error } = await supabase
-          .from('pagos')
-          .update({
-            monto_pagado: nextAmount,
-            estado: nextState,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', movimiento.pago_id)
-
-        if (error) throw error
-      }
+      await revertPaymentMovement(movimiento)
     }
 
     const deleteMovementsRes = await supabase

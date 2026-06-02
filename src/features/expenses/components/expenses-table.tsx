@@ -45,6 +45,20 @@ import {
 
 type CategoriaTab = 'all' | 'Productora' | 'Otros'
 
+function getPaymentStatus(totalPaid: number, isFullyPaid: boolean) {
+  if (isFullyPaid) return 'Pagado'
+  return totalPaid > 0 ? 'Parcial' : 'Pendiente'
+}
+
+function getPaymentStatusClass(totalPaid: number, isFullyPaid: boolean) {
+  if (isFullyPaid) {
+    return "bg-emerald-500/10 text-emerald-600 border-emerald-500/30 dark:text-emerald-400"
+  }
+  return totalPaid > 0
+    ? "bg-blue-500/10 text-blue-600 border-blue-500/30 dark:text-blue-400"
+    : "bg-amber-500/10 text-amber-600 border-amber-500/30 dark:text-amber-400"
+}
+
 export function ExpensesTable() {
   const { data, isLoading, error } = useExpenses()
   const { mutate } = useSWRConfig()
@@ -229,14 +243,10 @@ export function ExpensesTable() {
                     variant="outline"
                     className={cn(
                       "shrink-0 text-xs",
-                      isFullyPaid
-                        ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/30 dark:text-emerald-400"
-                        : totalAbonado > 0
-                        ? "bg-blue-500/10 text-blue-600 border-blue-500/30 dark:text-blue-400"
-                        : "bg-amber-500/10 text-amber-600 border-amber-500/30 dark:text-amber-400"
+                      getPaymentStatusClass(totalAbonado, isFullyPaid)
                     )}
                   >
-                    {isFullyPaid ? 'Pagado' : totalAbonado > 0 ? 'Parcial' : 'Pendiente'}
+                    {getPaymentStatus(totalAbonado, isFullyPaid)}
                   </Badge>
                 </div>
 
@@ -403,14 +413,10 @@ export function ExpensesTable() {
                       <Badge
                         variant="outline"
                         className={cn(
-                          isFullyPaid
-                            ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/30 dark:text-emerald-400"
-                            : totalAbonado > 0
-                            ? "bg-blue-500/10 text-blue-600 border-blue-500/30 dark:text-blue-400"
-                            : "bg-amber-500/10 text-amber-600 border-amber-500/30 dark:text-amber-400"
+                          getPaymentStatusClass(totalAbonado, isFullyPaid)
                         )}
                       >
-                        {isFullyPaid ? 'Pagado' : totalAbonado > 0 ? 'Parcial' : 'Pendiente'}
+                        {getPaymentStatus(totalAbonado, isFullyPaid)}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">

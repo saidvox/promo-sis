@@ -33,6 +33,47 @@ export type MatrixData = {
   inscripcionesDetailMap: Record<string, InscripcionLiteRow>
 }
 
+function buildQuotasMap(quotas: CuotaRow[]) {
+  const quotasMap: Record<string, CuotaRow> = {}
+  for (const quota of quotas) {
+    if (quota.mes_nombre) quotasMap[quota.mes_nombre] = quota
+  }
+  return quotasMap
+}
+
+function buildPaymentsMap(payments: PagoRow[]) {
+  const paymentsMap: Record<string, PagoRow> = {}
+  for (const payment of payments) {
+    if (payment.perfil_id && payment.cuota_id) {
+      paymentsMap[`${payment.perfil_id}-${payment.cuota_id}`] = payment
+    }
+  }
+  return paymentsMap
+}
+
+function buildMovementsMap(movements: PaymentMovement[]) {
+  const movementsMap: Record<string, PaymentMovement[]> = {}
+  for (const movement of movements) {
+    if (movement.perfil_id && movement.cuota_id) {
+      const key = `${movement.perfil_id}-${movement.cuota_id}`
+      movementsMap[key] = [...(movementsMap[key] ?? []), movement]
+    }
+  }
+  return movementsMap
+}
+
+function buildEnrollmentMaps(enrollments: InscripcionLiteRow[]) {
+  const enrollmentAmounts: Record<string, number> = {}
+  const enrollmentDetails: Record<string, InscripcionLiteRow> = {}
+  for (const enrollment of enrollments) {
+    if (enrollment.perfil_id) {
+      enrollmentAmounts[enrollment.perfil_id] = enrollment.monto || 100
+      enrollmentDetails[enrollment.perfil_id] = enrollment
+    }
+  }
+  return { enrollmentAmounts, enrollmentDetails }
+}
+
 /**
  * Hook para traer la Sábana de Pagos en bulk.
  * Cumple Vercel Best Practices: 
@@ -80,38 +121,11 @@ export const usePaymentsMatrix = () => {
     const pagosArray = pagosResult.data as PagoRow[]
     const movementsArray = (movementsResult.data ?? []) as PaymentMovement[]
 
-    // Construir diccionarios
-    const cuotasPorMes: Record<string, CuotaRow> = {}
-    for (const c of cuotasArray) {
-      if (c.mes_nombre) {
-        cuotasPorMes[c.mes_nombre] = c
-      }
-    }
-
-    const pagosMap: Record<string, PagoRow> = {}
-    for (const pago of pagosArray) {
-      if (pago.perfil_id && pago.cuota_id) {
-        pagosMap[`${pago.perfil_id}-${pago.cuota_id}`] = pago
-      }
-    }
-
-    const paymentMovementsMap: Record<string, PaymentMovement[]> = {}
-    for (const movement of movementsArray) {
-      if (movement.perfil_id && movement.cuota_id) {
-        const key = `${movement.perfil_id}-${movement.cuota_id}`
-        paymentMovementsMap[key] = [...(paymentMovementsMap[key] ?? []), movement]
-      }
-    }
-
-    const inscripcionesMap: Record<string, number> = {}
-    const inscripcionesDetailMap: Record<string, InscripcionLiteRow> = {}
-    for (const i of inscripciones) {
-      if (i.perfil_id) {
-        // En caso de fallas de fetch cache, garantizamos un valor truthy
-        inscripcionesMap[i.perfil_id] = i.monto || 100 
-        inscripcionesDetailMap[i.perfil_id] = i
-      }
-    }
+    const cuotasPorMes = buildQuotasMap(cuotasArray)
+    const pagosMap = buildPaymentsMap(pagosArray)
+    const paymentMovementsMap = buildMovementsMap(movementsArray)
+    const { enrollmentAmounts: inscripcionesMap, enrollmentDetails: inscripcionesDetailMap } =
+      buildEnrollmentMaps(inscripciones)
 
     return { perfilesInscritos, cuotasPorMes, pagosMap, paymentMovementsMap, inscripcionesMap, inscripcionesDetailMap }
   }
