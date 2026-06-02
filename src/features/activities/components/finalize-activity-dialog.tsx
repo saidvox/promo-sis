@@ -655,6 +655,7 @@ export function FinalizeActivityDialog({ open, onOpenChange, activity }: Finaliz
           : 'Actividad finalizada y beneficios aplicados.'
       )
       mutate('api/activities')
+      mutate('api/payments')
       mutate('api/payments-matrix')
       mutate('api/dashboard-stats')
       mutate('api/expenses')

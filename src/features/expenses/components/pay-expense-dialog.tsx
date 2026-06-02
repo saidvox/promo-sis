@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase/client'
 import { getErrorMessage } from '@/lib/error-utils'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
+import { format } from 'date-fns'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -17,8 +18,36 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { DatePicker } from '@/components/ui/date-picker'
 
 import type { EgresoWithAbonos } from '../api/use-expenses'
+
+const VOUCHER_BUCKET = 'expense-vouchers'
+const MAX_VOUCHER_SIZE = 5 * 1024 * 1024
+const ALLOWED_VOUCHER_TYPES = ['image/jpeg', 'image/png', 'image/webp']
+
+const sanitizeFileName = (fileName: string) =>
+  fileName
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9._-]/g, '-')
+    .replace(/-+/g, '-')
+    .slice(0, 90)
+
+const validateVoucherFile = (file: File) => {
+  if (!ALLOWED_VOUCHER_TYPES.includes(file.type)) {
+    return 'Solo se permiten imagenes JPG, PNG o WebP.'
+  }
+
+  if (file.size > MAX_VOUCHER_SIZE) {
+    return 'La imagen no puede pesar mas de 5 MB.'
+  }
+
+  return null
+}
+
+const buildVoucherPath = (egresoId: string, movementId: string, file: File) =>
+  `${egresoId}/${movementId}-${Date.now()}-${sanitizeFileName(file.name)}`
 
 interface PayExpenseDialogProps {
   open: boolean
@@ -30,6 +59,8 @@ interface PayExpenseDialogProps {
 export function PayExpenseDialog({ open, onOpenChange, egreso, saldoDisponible }: PayExpenseDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [montoAbono, setMontoAbono] = useState<string>('')
+  const [fechaPago, setFechaPago] = useState<string>(() => format(new Date(), 'yyyy-MM-dd'))
+  const [voucherFile, setVoucherFile] = useState<File | null>(null)
   const { mutate } = useSWRConfig()
 
   const pagadoAcumulado = egreso?.abonos_egresos.reduce((acc, a) => acc + a.monto_abono, 0) ?? 0
@@ -38,6 +69,8 @@ export function PayExpenseDialog({ open, onOpenChange, egreso, saldoDisponible }
   useEffect(() => {
     if (open && egreso) {
       setMontoAbono(pendiente.toString())
+      setFechaPago(format(new Date(), 'yyyy-MM-dd'))
+      setVoucherFile(null)
     }
   }, [open, egreso, pendiente])
 
@@ -47,6 +80,31 @@ export function PayExpenseDialog({ open, onOpenChange, egreso, saldoDisponible }
   const saldoDespues = saldoDisponible - montoAbonoNum
   const insufficient = saldoDespues < 0
   const excedePendiente = montoAbonoNum > pendiente
+
+  const uploadVoucher = async (movementId: string, file: File) => {
+    const validationError = validateVoucherFile(file)
+    if (validationError) {
+      throw new Error(validationError)
+    }
+
+    const voucherPath = buildVoucherPath(egreso.id, movementId, file)
+    const { error } = await supabase.storage
+      .from(VOUCHER_BUCKET)
+      .upload(voucherPath, file, {
+        contentType: file.type,
+        upsert: false,
+      })
+
+    if (error) throw error
+
+    return {
+      voucher_path: voucherPath,
+      voucher_filename: file.name,
+      voucher_mime_type: file.type,
+      voucher_size: file.size,
+      voucher_uploaded_at: new Date().toISOString(),
+    }
+  }
 
   const handlePay = async () => {
     if (montoAbonoNum <= 0) {
@@ -66,18 +124,26 @@ export function PayExpenseDialog({ open, onOpenChange, egreso, saldoDisponible }
 
     setIsSubmitting(true)
     try {
-      // 1. Insertar el abono
+      const movementId = crypto.randomUUID()
+      const voucherData = voucherFile ? await uploadVoucher(movementId, voucherFile) : {}
+
+      const now = new Date()
+      const timeString = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`
+      const localDateTimeStr = `${fechaPago}T${timeString}`
+      const customFechaPago = new Date(localDateTimeStr).toISOString()
+
       const { error: abonoError } = await supabase
         .from('abonos_egresos')
         .insert({
+          id: movementId,
           egreso_id: egreso.id,
           monto_abono: montoAbonoNum,
-          fecha_pago: new Date().toISOString()
+          fecha_pago: customFechaPago,
+          ...voucherData
         })
 
       if (abonoError) throw abonoError
 
-      // 2. Recalcular el estado del egreso con cada movimiento registrado
       const nuevoTotalPagado = pagadoAcumulado + montoAbonoNum
       const nuevoEstado = nuevoTotalPagado >= egreso.monto ? 'Pagado' : 'Pendiente'
       const { error: statusError } = await supabase
@@ -130,6 +196,45 @@ export function PayExpenseDialog({ open, onOpenChange, egreso, saldoDisponible }
             {insufficient && montoAbonoNum > 0 && (
               <p className="text-[10px] text-rose-500 font-medium">No hay suficiente saldo en caja.</p>
             )}
+          </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor="fecha-pago">Fecha de pago</Label>
+            <DatePicker
+              id="fecha-pago"
+              date={fechaPago}
+              onChange={(newDate) => setFechaPago(newDate || format(new Date(), 'yyyy-MM-dd'))}
+              disabled={isSubmitting}
+              allowClear={false}
+            />
+          </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor="voucher-file">Comprobante de pago (opcional)</Label>
+            <Input
+              id="voucher-file"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              onChange={(event) => {
+                const file = event.target.files?.[0] ?? null
+                if (file) {
+                  const validationError = validateVoucherFile(file)
+                  if (validationError) {
+                    toast.error(validationError)
+                    event.target.value = ''
+                    setVoucherFile(null)
+                  } else {
+                    setVoucherFile(file)
+                  }
+                } else {
+                  setVoucherFile(null)
+                }
+              }}
+              disabled={isSubmitting}
+            />
+            <p className="text-[10px] text-muted-foreground">
+              JPG, PNG o WebP hasta 5 MB. {voucherFile ? `Seleccionado: ${voucherFile.name}` : ''}
+            </p>
           </div>
 
           <div className="rounded-lg bg-secondary/30 border border-border/50 p-4 space-y-3">

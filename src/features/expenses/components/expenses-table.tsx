@@ -105,8 +105,9 @@ export function ExpensesTable() {
             {isLoading ? (
               <Skeleton className="h-7 w-28" />
             ) : (
-              <div className={cn("text-2xl font-bold", (stats?.saldoDisponible ?? 0) >= 0 ? "text-emerald-500" : "text-rose-500")}>
-                S/ {stats?.saldoDisponible.toFixed(2)}
+              <div className={cn("text-2xl font-bold tabular-nums", (stats?.saldoDisponible ?? 0) >= 0 ? "text-emerald-500" : "text-rose-500")}>
+                <span className={cn("text-xs sm:text-lg font-medium mr-1", (stats?.saldoDisponible ?? 0) >= 0 ? "text-emerald-500/70" : "text-rose-500/70")}>S/</span>
+                {(stats?.saldoDisponible ?? 0).toLocaleString('es-PE', { minimumFractionDigits: 2 })}
               </div>
             )}
             <p className="text-xs text-muted-foreground mt-1">Ingresos - Egresos pagados</p>
@@ -122,8 +123,9 @@ export function ExpensesTable() {
             {isLoading ? (
               <Skeleton className="h-7 w-28" />
             ) : (
-              <div className="text-2xl font-bold text-blue-500">
-                S/ {stats?.totalPagadoProductora.toFixed(2)}
+              <div className="text-2xl font-bold tabular-nums text-blue-500">
+                <span className="text-xs sm:text-lg font-medium mr-1 text-blue-500/70">S/</span>
+                {(stats?.totalPagadoProductora ?? 0).toLocaleString('es-PE', { minimumFractionDigits: 2 })}
               </div>
             )}
             <p className="text-xs text-muted-foreground mt-1">RG Productions</p>
@@ -139,8 +141,9 @@ export function ExpensesTable() {
             {isLoading ? (
               <Skeleton className="h-7 w-28" />
             ) : (
-              <div className="text-2xl font-bold">
-                S/ {stats?.totalPagadoOtros.toFixed(2)}
+              <div className="text-2xl font-bold tabular-nums">
+                <span className="text-xs sm:text-lg font-medium mr-1 text-muted-foreground/70">S/</span>
+                {(stats?.totalPagadoOtros ?? 0).toLocaleString('es-PE', { minimumFractionDigits: 2 })}
               </div>
             )}
             <p className="text-xs text-muted-foreground mt-1">Materiales, imprenta, etc.</p>
@@ -156,8 +159,9 @@ export function ExpensesTable() {
             {isLoading ? (
               <Skeleton className="h-7 w-28" />
             ) : (
-              <div className="text-2xl font-bold text-amber-500">
-                S/ {stats?.totalComprometido.toFixed(2)}
+              <div className="text-2xl font-bold tabular-nums text-amber-500">
+                <span className="text-xs sm:text-lg font-medium mr-1 text-amber-500/70">S/</span>
+                {(stats?.totalComprometido ?? 0).toLocaleString('es-PE', { minimumFractionDigits: 2 })}
               </div>
             )}
             <p className="text-xs text-muted-foreground mt-1">Pendientes de ejecutar</p>

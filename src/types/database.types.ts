@@ -14,74 +14,52 @@ export type Database = {
   }
   public: {
     Tables: {
-      actividades: {
+      abonos_egresos: {
         Row: {
-          created_at: string | null
-          descripcion: string | null
-          estado: string
-          etiqueta_unidad: string
-          fecha_evento: string
+          created_at: string
+          egreso_id: string
+          fecha_pago: string
           id: string
-          minimo_unidades_beneficio: number
-          monto_beneficio_unitario: number
-          monto_promocion_unitario: number
-          monto_recaudado: number
-          nombre: string
-          precio_unitario: number
-          tipo_actividad: string
-          total_beneficio: number
-          total_bruto: number
-          total_premios_externos: number
-          total_promocion: number
-          usa_grupos: boolean
-          usa_premios: boolean
-          updated_at: string | null
+          monto_abono: number
+          voucher_filename: string | null
+          voucher_mime_type: string | null
+          voucher_path: string | null
+          voucher_size: number | null
+          voucher_uploaded_at: string | null
         }
         Insert: {
-          created_at?: string | null
-          descripcion?: string | null
-          estado?: string
-          etiqueta_unidad?: string
-          fecha_evento: string
+          created_at?: string
+          egreso_id: string
+          fecha_pago?: string
           id?: string
-          minimo_unidades_beneficio?: number
-          monto_beneficio_unitario?: number
-          monto_promocion_unitario?: number
-          monto_recaudado?: number
-          nombre: string
-          precio_unitario?: number
-          tipo_actividad?: string
-          total_beneficio?: number
-          total_bruto?: number
-          total_premios_externos?: number
-          total_promocion?: number
-          usa_grupos?: boolean
-          usa_premios?: boolean
-          updated_at?: string | null
+          monto_abono?: number
+          voucher_filename?: string | null
+          voucher_mime_type?: string | null
+          voucher_path?: string | null
+          voucher_size?: number | null
+          voucher_uploaded_at?: string | null
         }
         Update: {
-          created_at?: string | null
-          descripcion?: string | null
-          estado?: string
-          etiqueta_unidad?: string
-          fecha_evento?: string
+          created_at?: string
+          egreso_id?: string
+          fecha_pago?: string
           id?: string
-          minimo_unidades_beneficio?: number
-          monto_beneficio_unitario?: number
-          monto_promocion_unitario?: number
-          monto_recaudado?: number
-          nombre?: string
-          precio_unitario?: number
-          tipo_actividad?: string
-          total_beneficio?: number
-          total_bruto?: number
-          total_premios_externos?: number
-          total_promocion?: number
-          usa_grupos?: boolean
-          usa_premios?: boolean
-          updated_at?: string | null
+          monto_abono?: number
+          voucher_filename?: string | null
+          voucher_mime_type?: string | null
+          voucher_path?: string | null
+          voucher_size?: number | null
+          voucher_uploaded_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "abonos_egresos_egreso_id_fkey"
+            columns: ["egreso_id"]
+            isOneToOne: false
+            referencedRelation: "egresos"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       actividad_grupos: {
         Row: {
@@ -110,6 +88,7 @@ export type Database = {
           created_at?: string
           id?: string
           nombre?: string
+          notes?: string | null // Wait, in the database it is notas
           notas?: string | null
           premio?: string | null
           updated_at?: string
@@ -207,37 +186,74 @@ export type Database = {
           },
         ]
       }
-      abonos_egresos: {
+      actividades: {
         Row: {
-          created_at: string
-          egreso_id: string
-          fecha_pago: string
+          created_at: string | null
+          descripcion: string | null
+          estado: string
+          etiqueta_unidad: string
+          fecha_evento: string
           id: string
-          monto_abono: number
+          minimo_unidades_beneficio: number
+          monto_beneficio_unitario: number
+          monto_promocion_unitario: number
+          monto_recaudado: number
+          nombre: string
+          precio_unitario: number
+          tipo_actividad: string
+          total_beneficio: number
+          total_bruto: number
+          total_premios_externos: number
+          total_promocion: number
+          updated_at: string | null
+          usa_grupos: boolean
+          usa_premios: boolean
         }
         Insert: {
-          created_at?: string
-          egreso_id: string
-          fecha_pago?: string
+          created_at?: string | null
+          descripcion?: string | null
+          estado?: string
+          etiqueta_unidad?: string
+          fecha_evento: string
           id?: string
-          monto_abono?: number
+          minimo_unidades_beneficio?: number
+          monto_beneficio_unitario?: number
+          monto_promocion_unitario?: number
+          monto_recaudado?: number
+          nombre: string
+          precio_unitario?: number
+          tipo_actividad?: string
+          total_beneficio?: number
+          total_bruto?: number
+          total_premios_externos?: number
+          total_promocion?: number
+          usa_grupos?: boolean
+          usa_premios?: boolean
+          updated_at?: string | null
         }
         Update: {
-          created_at?: string
-          egreso_id?: string
-          fecha_pago?: string
+          created_at?: string | null
+          descripcion?: string | null
+          estado?: string
+          etiqueta_unidad?: string
+          fecha_evento?: string
           id?: string
-          monto_abono?: number
+          minimo_unidades_beneficio?: number
+          monto_beneficio_unitario?: number
+          monto_promocion_unitario?: number
+          monto_recaudado?: number
+          nombre?: string
+          precio_unitario?: number
+          tipo_actividad?: string
+          total_beneficio?: number
+          total_bruto?: number
+          total_premios_externos?: number
+          total_promocion?: number
+          usa_grupos?: boolean
+          usa_premios?: boolean
+          updated_at?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "abonos_egresos_egreso_id_fkey"
-            columns: ["egreso_id"]
-            isOneToOne: false
-            referencedRelation: "egresos"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       config_cuotas: {
         Row: {
@@ -371,54 +387,6 @@ export type Database = {
           },
         ]
       }
-      pagos: {
-        Row: {
-          created_at: string | null
-          cuota_id: string | null
-          estado: Database["public"]["Enums"]["estado_pago"] | null
-          id: string
-          monto_pagado: number
-          perfil_id: string | null
-          updated_at: string | null
-          url_voucher: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          cuota_id?: string | null
-          estado?: Database["public"]["Enums"]["estado_pago"] | null
-          id?: string
-          monto_pagado: number
-          perfil_id?: string | null
-          updated_at?: string | null
-          url_voucher?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          cuota_id?: string | null
-          estado?: Database["public"]["Enums"]["estado_pago"] | null
-          id?: string
-          monto_pagado?: number
-          perfil_id?: string | null
-          updated_at?: string | null
-          url_voucher?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "pagos_cuota_id_fkey"
-            columns: ["cuota_id"]
-            isOneToOne: false
-            referencedRelation: "config_cuotas"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "pagos_perfil_id_fkey"
-            columns: ["perfil_id"]
-            isOneToOne: false
-            referencedRelation: "perfiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       pago_movimientos: {
         Row: {
           actividad_id: string | null
@@ -502,6 +470,54 @@ export type Database = {
           },
           {
             foreignKeyName: "pago_movimientos_perfil_id_fkey"
+            columns: ["perfil_id"]
+            isOneToOne: false
+            referencedRelation: "perfiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pagos: {
+        Row: {
+          created_at: string | null
+          cuota_id: string | null
+          estado: Database["public"]["Enums"]["estado_pago"] | null
+          id: string
+          monto_pagado: number
+          perfil_id: string | null
+          updated_at: string | null
+          url_voucher: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          cuota_id?: string | null
+          estado?: Database["public"]["Enums"]["estado_pago"] | null
+          id?: string
+          monto_pagado: number
+          perfil_id?: string | null
+          updated_at?: string | null
+          url_voucher?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          cuota_id?: string | null
+          estado?: Database["public"]["Enums"]["estado_pago"] | null
+          id?: string
+          monto_pagado?: number
+          perfil_id?: string | null
+          updated_at?: string | null
+          url_voucher?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pagos_cuota_id_fkey"
+            columns: ["cuota_id"]
+            isOneToOne: false
+            referencedRelation: "config_cuotas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pagos_perfil_id_fkey"
             columns: ["perfil_id"]
             isOneToOne: false
             referencedRelation: "perfiles"

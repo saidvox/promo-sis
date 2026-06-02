@@ -27,7 +27,8 @@ export const useDashboardStats = () => {
       allPagosRes, 
       inscritosRes,
       actividadesRes,
-      abonosRes
+      abonosRes,
+      activityBenefitMovementsRes
     ] = await Promise.all([
       supabase.from('pagos').select('monto_pagado').neq('estado', 'Rechazado'),
       supabase.from('egresos').select('monto, estado'),
@@ -35,8 +36,9 @@ export const useDashboardStats = () => {
       supabase.from('config_cuotas').select('id, monto').eq('activo', true),
       supabase.from('pagos').select('perfil_id, cuota_id, monto_pagado'),
       supabase.from('inscripciones').select('perfil_id, perfiles!inner(activo)'),
-      supabase.from('actividades').select('monto_recaudado'),
+      supabase.from('actividades').select('total_promocion, total_beneficio, monto_recaudado'),
       supabase.from('abonos_egresos').select('monto_abono'),
+      supabase.from('pago_movimientos').select('monto').eq('origen', 'beneficio_actividad'),
     ])
 
     if (pagosRes.error) throw pagosRes.error
@@ -47,10 +49,18 @@ export const useDashboardStats = () => {
     if (inscritosRes.error) throw inscritosRes.error
     if (actividadesRes.error) throw actividadesRes.error
     if (abonosRes.error) throw abonosRes.error
+    if (activityBenefitMovementsRes.error) throw activityBenefitMovementsRes.error
 
     const totalPagos = pagosRes.data.reduce((acc, cur) => acc + cur.monto_pagado, 0)
     const totalInscripciones = inscripcionesRes.data.reduce((acc, cur) => acc + cur.monto, 0)
-    const totalActividades = actividadesRes.data.reduce((acc, cur) => acc + Number(cur.monto_recaudado), 0)
+    const totalActivityPromotion = actividadesRes.data.reduce(
+      (acc, cur) => acc + Number(cur.total_promocion ?? cur.monto_recaudado ?? 0),
+      0
+    )
+    const totalActivityBenefit = actividadesRes.data.reduce((acc, cur) => acc + Number(cur.total_beneficio ?? 0), 0)
+    const totalActivityBenefitApplied = activityBenefitMovementsRes.data.reduce((acc, movement) => acc + Number(movement.monto ?? 0), 0)
+    const totalActivityPendingBenefit = Math.max(0, totalActivityBenefit - totalActivityBenefitApplied)
+    const totalActividades = totalActivityPromotion + totalActivityPendingBenefit
     
     const totalIncome = totalPagos + totalInscripciones + totalActividades
     

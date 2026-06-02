@@ -63,6 +63,7 @@ export function ActivitiesTable() {
       toast.success('Actividad revertida y beneficios descontados')
       mutate('api/dashboard-stats')
       mutate('api/expenses')
+      mutate('api/payments')
       mutate('api/payments-matrix')
     } catch (e) {
       toast.error('Error al revertir la actividad')
@@ -81,6 +82,8 @@ export function ActivitiesTable() {
       // Actualizar también dashboard-stats si existe
       mutate('api/dashboard-stats')
       mutate('api/expenses') // Porque afecta el saldo general
+      mutate('api/payments')
+      mutate('api/payments-matrix')
       setActivityToDelete(null)
     } catch (err: unknown) {
       toast.error('Error al eliminar la actividad')

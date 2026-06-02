@@ -4,13 +4,7 @@ import type { Database } from '@/types/database.types'
 
 export type EgresoRow = Database['public']['Tables']['egresos']['Row']
 
-export type AbonoRow = {
-  id: string
-  egreso_id: string
-  monto_abono: number
-  fecha_pago: string
-  created_at: string
-}
+export type AbonoRow = Database['public']['Tables']['abonos_egresos']['Row']
 
 export type EgresoWithAbonos = EgresoRow & {
   abonos_egresos: AbonoRow[]

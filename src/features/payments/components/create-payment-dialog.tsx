@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale/es'
-import { ExternalLinkIcon, FileImageIcon, HistoryIcon, Loader2Icon, PaperclipIcon, WalletIcon } from 'lucide-react'
+import { ExternalLinkIcon, FileImageIcon, HistoryIcon, Loader2Icon, PaperclipIcon, WalletIcon, PencilIcon, XIcon, Trash2Icon } from 'lucide-react'
 import { useSWRConfig } from 'swr'
 import { supabase } from '@/lib/supabase/client'
 import { toast } from 'sonner'
@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { DatePicker } from '@/components/ui/date-picker'
 import {
   Dialog,
   DialogContent,
@@ -80,6 +81,11 @@ export function CreatePaymentDialog({
 
   const [montoAbonar, setMontoAbonar] = useState<number | ''>('')
   const [voucherFile, setVoucherFile] = useState<File | null>(null)
+  const [fechaAbono, setFechaAbono] = useState<string>(() => format(new Date(), 'yyyy-MM-dd'))
+  const [editingMovementId, setEditingMovementId] = useState<string | null>(null)
+  const [editingMovementDetailsId, setEditingMovementDetailsId] = useState<string | null>(null)
+  const [editMonto, setEditMonto] = useState<number | ''>('')
+  const [editNota, setEditNota] = useState<string>('')
 
   useEffect(() => {
     if (open) {
@@ -87,6 +93,11 @@ export function CreatePaymentDialog({
       setVoucherFile(null)
       setAttachingMovementId(null)
       setViewingMovementId(null)
+      setFechaAbono(format(new Date(), 'yyyy-MM-dd'))
+      setEditingMovementId(null)
+      setEditingMovementDetailsId(null)
+      setEditMonto('')
+      setEditNota('')
     }
   }, [open])
 
@@ -102,6 +113,7 @@ export function CreatePaymentDialog({
   const percentage = Math.min(100, Math.round((totalPagado / meta) * 100))
 
   const refreshPaymentData = () => {
+    mutate('api/payments')
     mutate('api/payments-matrix')
     mutate('api/dashboard-stats')
     mutate('api/expenses')
@@ -154,6 +166,139 @@ export function CreatePaymentDialog({
 
     if (previousPath) {
       await supabase.storage.from(VOUCHER_BUCKET).remove([previousPath])
+    }
+  }
+
+  const handleUpdateMovementDate = async (movementId: string, newDateStr: string) => {
+    if (!newDateStr) return
+    try {
+      const movementObj = sortedMovements.find(m => m.id === movementId)
+      if (!movementObj) return
+
+      // Parse the original time to preserve it
+      const originalDate = new Date(movementObj.created_at)
+      const timeString = `${String(originalDate.getHours()).padStart(2, '0')}:${String(originalDate.getMinutes()).padStart(2, '0')}:${String(originalDate.getSeconds()).padStart(2, '0')}`
+      const localDateTimeStr = `${newDateStr}T${timeString}`
+      const updatedCreatedAt = new Date(localDateTimeStr).toISOString()
+
+      const { error } = await supabase
+        .from('pago_movimientos')
+        .update({ created_at: updatedCreatedAt })
+        .eq('id', movementId)
+
+      if (error) throw error
+      toast.success('Fecha de abono actualizada')
+      refreshPaymentData()
+    } catch (error: any) {
+      toast.error(error.message || 'No se pudo actualizar la fecha')
+    }
+  }
+
+  const handleDeleteMovement = async (movement: PaymentMovement) => {
+    const confirmDelete = window.confirm(`¿Estás seguro de que deseas eliminar este abono de S/ ${Number(movement.monto).toFixed(2)}?`)
+    if (!confirmDelete) return
+
+    setIsSubmitting(true)
+
+    try {
+      const { error: deleteError } = await supabase
+        .from('pago_movimientos')
+        .delete()
+        .eq('id', movement.id)
+
+      if (deleteError) throw deleteError
+
+      if (pagoExistente) {
+        const nuevoTotal = Math.max(0, totalPagado - Number(movement.monto))
+        const nuevoEstado = nuevoTotal >= meta ? 'Pagado' : 'Pendiente'
+
+        if (nuevoTotal <= 0) {
+          const { error: deletePagoError } = await supabase
+            .from('pagos')
+            .delete()
+            .eq('id', pagoExistente.id)
+
+          if (deletePagoError) throw deletePagoError
+        } else {
+          const { error: updatePagoError } = await supabase
+            .from('pagos')
+            .update({
+              monto_pagado: nuevoTotal,
+              estado: nuevoEstado,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', pagoExistente.id)
+
+          if (updatePagoError) throw updatePagoError
+        }
+      }
+
+      if (movement.voucher_path) {
+        await supabase.storage.from(VOUCHER_BUCKET).remove([movement.voucher_path])
+      }
+
+      toast.success('Abono eliminado correctamente')
+      refreshPaymentData()
+      setEditingMovementDetailsId(null)
+    } catch (error: any) {
+      toast.error(error.message || 'Error al eliminar el abono')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleUpdateMovementDetails = async (movement: PaymentMovement) => {
+    if (editMonto === '' || Number(editMonto) <= 0) {
+      toast.error('Ingresa un monto válido.')
+      return
+    }
+
+    const nuevoMonto = Number(editMonto)
+    const montoAnterior = Number(movement.monto)
+    const diferencia = nuevoMonto - montoAnterior
+    const nuevoTotal = totalPagado + diferencia
+
+    if (nuevoTotal > meta) {
+      toast.error(`El monto total del pago no puede superar la cuota de S/ ${meta.toFixed(2)} (Total actual: S/ ${nuevoTotal.toFixed(2)})`)
+      return
+    }
+
+    setIsSubmitting(true)
+
+    try {
+      const { error: updateError } = await supabase
+        .from('pago_movimientos')
+        .update({
+          monto: nuevoMonto,
+          nota: editNota,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', movement.id)
+
+      if (updateError) throw updateError
+
+      if (pagoExistente) {
+        const nuevoEstado = nuevoTotal >= meta ? 'Pagado' : 'Pendiente'
+
+        const { error: updatePagoError } = await supabase
+          .from('pagos')
+          .update({
+            monto_pagado: nuevoTotal,
+            estado: nuevoEstado,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', pagoExistente.id)
+
+        if (updatePagoError) throw updatePagoError
+      }
+
+      toast.success('Abono actualizado correctamente')
+      refreshPaymentData()
+      setEditingMovementDetailsId(null)
+    } catch (error: any) {
+      toast.error(error.message || 'Error al actualizar el abono')
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -214,6 +359,11 @@ export function CreatePaymentDialog({
         const movementId = crypto.randomUUID()
         const voucherData = voucherFile ? await uploadVoucher(movementId, voucherFile) : {}
 
+        const now = new Date()
+        const timeString = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`
+        const localDateTimeStr = `${fechaAbono}T${timeString}`
+        const customCreatedAt = new Date(localDateTimeStr).toISOString()
+
         await insertMovement({
           id: movementId,
           pago_id: paymentId,
@@ -222,6 +372,7 @@ export function CreatePaymentDialog({
           origen: 'manual',
           monto: incremento,
           nota: 'Abono manual registrado desde matriz de pagos',
+          created_at: customCreatedAt,
           ...voucherData,
         })
       }
@@ -370,6 +521,57 @@ export function CreatePaymentDialog({
                 const isAttaching = attachingMovementId === movement.id
                 const isViewing = viewingMovementId === movement.id
 
+                if (editingMovementDetailsId === movement.id) {
+                  return (
+                    <div key={movement.id} className="flex flex-col gap-3 px-4 py-3 bg-secondary/15">
+                      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                        <div className="grid gap-1">
+                          <Label htmlFor={`edit-monto-${movement.id}`} className="text-[10px] font-semibold text-muted-foreground uppercase">Monto (S/)</Label>
+                          <Input
+                            id={`edit-monto-${movement.id}`}
+                            type="number"
+                            step="0.01"
+                            min="0.1"
+                            value={editMonto}
+                            onChange={(e) => setEditMonto(e.target.value ? Number(e.target.value) : '')}
+                            className="h-8 text-xs font-bold"
+                          />
+                        </div>
+                        <div className="grid gap-1">
+                          <Label htmlFor={`edit-nota-${movement.id}`} className="text-[10px] font-semibold text-muted-foreground uppercase">Nota / Comentario</Label>
+                          <Input
+                            id={`edit-nota-${movement.id}`}
+                            type="text"
+                            value={editNota}
+                            onChange={(e) => setEditNota(e.target.value)}
+                            className="h-8 text-xs"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-7 text-[11px]"
+                          onClick={() => setEditingMovementDetailsId(null)}
+                        >
+                          Cancelar
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          className="h-7 text-[11px] bg-primary text-primary-foreground"
+                          onClick={() => void handleUpdateMovementDetails(movement)}
+                          disabled={editMonto === '' || Number(editMonto) <= 0}
+                        >
+                          Guardar Cambios
+                        </Button>
+                      </div>
+                    </div>
+                  )
+                }
+
                 return (
                   <div key={movement.id} className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
                     <div className="min-w-0">
@@ -385,9 +587,48 @@ export function CreatePaymentDialog({
                           </Badge>
                         )}
                       </div>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {format(new Date(movement.created_at), "d MMM yyyy, HH:mm", { locale: es })}
-                      </p>
+                      {editingMovementId === movement.id ? (
+                        <div className="flex items-center gap-2 mt-1">
+                          <DatePicker
+                            date={format(new Date(movement.created_at), "yyyy-MM-dd")}
+                            onChange={(newDate) => {
+                              if (newDate) {
+                                void handleUpdateMovementDate(movement.id, newDate)
+                              }
+                              setEditingMovementId(null)
+                            }}
+                            allowClear={false}
+                            className="h-8 text-xs max-w-[150px]"
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 shrink-0"
+                            onClick={() => setEditingMovementId(null)}
+                          >
+                            <XIcon className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1.5 mt-1 group/date">
+                          <p className="text-xs text-muted-foreground">
+                            {format(new Date(movement.created_at), "d MMM yyyy, HH:mm", { locale: es })}
+                          </p>
+                          {movement.origen === 'manual' && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-5 w-5 opacity-0 group-hover/date:opacity-100 transition-opacity"
+                              onClick={() => setEditingMovementId(movement.id)}
+                              title="Editar fecha"
+                            >
+                              <PencilIcon className="h-3 w-3 text-muted-foreground" />
+                            </Button>
+                          )}
+                        </div>
+                      )}
                       {movement.nota && (
                         <p className="mt-1 truncate text-xs text-muted-foreground">{movement.nota}</p>
                       )}
@@ -427,6 +668,34 @@ export function CreatePaymentDialog({
                           event.target.value = ''
                         }}
                       />
+                      {movement.origen === 'manual' && (
+                        <>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => {
+                              setEditingMovementDetailsId(movement.id)
+                              setEditMonto(Number(movement.monto))
+                              setEditNota(movement.nota || '')
+                            }}
+                            title="Editar monto y nota"
+                          >
+                            <PencilIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            className="h-8 w-8 border-rose-200 hover:border-rose-300 hover:bg-rose-50 text-rose-500 hover:text-rose-600"
+                            onClick={() => void handleDeleteMovement(movement)}
+                            title="Eliminar abono"
+                          >
+                            <Trash2Icon className="h-3.5 w-3.5" />
+                          </Button>
+                        </>
+                      )}
                     </div>
                   </div>
                 )
@@ -472,6 +741,16 @@ export function CreatePaymentDialog({
                   {Number(montoAbonar) > deudaRestante && (
                     <p className="text-[10px] text-rose-500 font-medium">No puedes abonar más de la deuda restante.</p>
                   )}
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="fecha-abono">Fecha del abono</Label>
+                  <DatePicker
+                    id="fecha-abono"
+                    date={fechaAbono}
+                    onChange={(newDate) => setFechaAbono(newDate || format(new Date(), 'yyyy-MM-dd'))}
+                    disabled={isSubmitting}
+                    allowClear={false}
+                  />
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="voucher-file">Comprobante opcional</Label>

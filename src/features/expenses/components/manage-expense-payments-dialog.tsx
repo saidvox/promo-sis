@@ -1,12 +1,15 @@
 import { useEffect, useMemo, useState } from 'react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { HistoryIcon, Loader2Icon, RotateCcwIcon } from 'lucide-react'
+import { HistoryIcon, Loader2Icon, RotateCcwIcon, PencilIcon, XIcon, FileImageIcon, ExternalLinkIcon, PaperclipIcon } from 'lucide-react'
 import { useSWRConfig } from 'swr'
 import { supabase } from '@/lib/supabase/client'
 import { getErrorMessage } from '@/lib/error-utils'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
+import { Label } from '@/components/ui/label'
+import { Input } from '@/components/ui/input'
+import { DatePicker } from '@/components/ui/date-picker'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -45,11 +48,17 @@ export function ManageExpensePaymentsDialog({
   const [abonos, setAbonos] = useState<AbonoRow[]>([])
   const [abonoToRevert, setAbonoToRevert] = useState<AbonoRow | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [editingAbonoId, setEditingAbonoId] = useState<string | null>(null)
+  const [attachingAbonoId, setAttachingAbonoId] = useState<string | null>(null)
+  const [viewingAbonoId, setViewingAbonoId] = useState<string | null>(null)
   const { mutate } = useSWRConfig()
 
   useEffect(() => {
     if (!open || !egreso) {
       setAbonoToRevert(null)
+      setEditingAbonoId(null)
+      setAttachingAbonoId(null)
+      setViewingAbonoId(null)
       return
     }
 
@@ -68,6 +77,139 @@ export function ManageExpensePaymentsDialog({
   if (!egreso) return null
 
   const pendiente = Math.max(egreso.monto - totalAbonado, 0)
+
+  const VOUCHER_BUCKET = 'expense-vouchers'
+  const MAX_VOUCHER_SIZE = 5 * 1024 * 1024
+  const ALLOWED_VOUCHER_TYPES = ['image/jpeg', 'image/png', 'image/webp']
+
+  const sanitizeFileName = (fileName: string) =>
+    fileName
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-zA-Z0-9._-]/g, '-')
+      .replace(/-+/g, '-')
+      .slice(0, 90)
+
+  const validateVoucherFile = (file: File) => {
+    if (!ALLOWED_VOUCHER_TYPES.includes(file.type)) {
+      return 'Solo se permiten imagenes JPG, PNG o WebP.'
+    }
+    if (file.size > MAX_VOUCHER_SIZE) {
+      return 'La imagen no puede pesar mas de 5 MB.'
+    }
+    return null
+  }
+
+  const buildVoucherPath = (egresoId: string, abonoId: string, file: File) =>
+    `${egresoId}/${abonoId}-${Date.now()}-${sanitizeFileName(file.name)}`
+
+  const uploadVoucher = async (abonoId: string, file: File) => {
+    const validationError = validateVoucherFile(file)
+    if (validationError) {
+      throw new Error(validationError)
+    }
+
+    const voucherPath = buildVoucherPath(egreso.id, abonoId, file)
+    const { error } = await supabase.storage
+      .from(VOUCHER_BUCKET)
+      .upload(voucherPath, file, {
+        contentType: file.type,
+        upsert: false,
+      })
+
+    if (error) throw error
+
+    return {
+      voucher_path: voucherPath,
+      voucher_filename: file.name,
+      voucher_mime_type: file.type,
+      voucher_size: file.size,
+      voucher_uploaded_at: new Date().toISOString(),
+    }
+  }
+
+  const handleAttachVoucher = async (abono: AbonoRow, file: File | null) => {
+    if (!file) return
+
+    setAttachingAbonoId(abono.id)
+    try {
+      const voucherData = await uploadVoucher(abono.id, file)
+      
+      const { error: updateError } = await supabase
+        .from('abonos_egresos')
+        .update(voucherData)
+        .eq('id', abono.id)
+
+      if (updateError) throw updateError
+
+      toast.success('Comprobante adjuntado correctamente')
+      
+      setAbonos((current) =>
+        current.map((item) =>
+          item.id === abono.id
+            ? { ...item, ...voucherData }
+            : item
+        )
+      )
+
+      mutate('api/expenses')
+    } catch (error: any) {
+      toast.error(error.message || 'No se pudo adjuntar el comprobante')
+    } finally {
+      setAttachingAbonoId(null)
+    }
+  }
+
+  const handleOpenVoucher = async (abono: AbonoRow) => {
+    if (!abono.voucher_path) return
+
+    setViewingAbonoId(abono.id)
+    try {
+      const { data, error } = await supabase.storage
+        .from(VOUCHER_BUCKET)
+        .createSignedUrl(abono.voucher_path, 60)
+
+      if (error) throw error
+      window.open(data.signedUrl, '_blank', 'noopener,noreferrer')
+    } catch (error: any) {
+      toast.error(error.message || 'No se pudo abrir el comprobante')
+    } finally {
+      setViewingAbonoId(null)
+    }
+  }
+
+  const handleUpdateAbonoDate = async (abonoId: string, newDateStr: string) => {
+    if (!newDateStr) return
+    try {
+      const abonoObj = abonos.find(a => a.id === abonoId)
+      if (!abonoObj) return
+
+      const originalDate = new Date(abonoObj.fecha_pago)
+      const timeString = `${String(originalDate.getHours()).padStart(2, '0')}:${String(originalDate.getMinutes()).padStart(2, '0')}:${String(originalDate.getSeconds()).padStart(2, '0')}`
+      const localDateTimeStr = `${newDateStr}T${timeString}`
+      const updatedFechaPago = new Date(localDateTimeStr).toISOString()
+
+      const { error } = await supabase
+        .from('abonos_egresos')
+        .update({ fecha_pago: updatedFechaPago })
+        .eq('id', abonoId)
+
+      if (error) throw error
+      toast.success('Fecha de pago actualizada')
+      
+      setAbonos((current) =>
+        current.map((item) =>
+          item.id === abonoId
+            ? { ...item, fecha_pago: updatedFechaPago }
+            : item
+        ).sort((a, b) => new Date(b.fecha_pago).getTime() - new Date(a.fecha_pago).getTime())
+      )
+
+      mutate('api/expenses')
+    } catch (error: any) {
+      toast.error(error.message || 'No se pudo actualizar la fecha')
+    }
+  }
   const restoredAmount = abonoToRevert?.monto_abono ?? 0
   const totalTrasReversion = Math.max(totalAbonado - restoredAmount, 0)
   const pendienteTrasReversion = Math.max(egreso.monto - totalTrasReversion, 0)
@@ -84,7 +226,8 @@ export function ManageExpensePaymentsDialog({
 
       if (deleteError) throw deleteError
 
-      const nextStatus = totalTrasReversion >= egreso.monto ? 'Pagado' : 'Pendiente'
+      const totalAbonadoPostReversion = totalAbonado - abonoToRevert.monto_abono
+      const nextStatus = totalAbonadoPostReversion >= egreso.monto ? 'Pagado' : 'Pendiente'
       const { error: updateError } = await supabase
         .from('egresos')
         .update({
@@ -95,11 +238,15 @@ export function ManageExpensePaymentsDialog({
 
       if (updateError) throw updateError
 
+      if (abonoToRevert.voucher_path) {
+        await supabase.storage.from(VOUCHER_BUCKET).remove([abonoToRevert.voucher_path])
+      }
+
       setAbonos((current) => current.filter((abono) => abono.id !== abonoToRevert.id))
       setAbonoToRevert(null)
 
       toast.success(
-        totalTrasReversion > 0
+        totalAbonadoPostReversion > 0
           ? 'Abono revertido. El egreso quedo con saldo pendiente.'
           : 'Pago revertido. El egreso quedo nuevamente pendiente.'
       )
@@ -162,7 +309,7 @@ export function ManageExpensePaymentsDialog({
                 </p>
               </div>
             ) : (
-              <div className="max-h-[320px] space-y-2 overflow-y-auto pr-1">
+              <div className="max-h-[320px] space-y-3 overflow-y-auto pr-1">
                 {abonos.map((abono, index) => (
                   <div
                     key={abono.id}
@@ -182,12 +329,58 @@ export function ManageExpensePaymentsDialog({
                               Ultimo
                             </Badge>
                           )}
+                          {abono.voucher_path && (
+                            <Badge
+                              variant="outline"
+                              className="border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 gap-1"
+                            >
+                              <FileImageIcon className="h-3 w-3" />
+                              Voucher
+                            </Badge>
+                          )}
                         </div>
-                        <p className="text-xs text-muted-foreground">
-                          {format(new Date(abono.fecha_pago), "d MMM yyyy 'a las' HH:mm", {
-                            locale: es,
-                          })}
-                        </p>
+                        {editingAbonoId === abono.id ? (
+                          <div className="flex items-center gap-2 mt-1">
+                            <DatePicker
+                              date={format(new Date(abono.fecha_pago), "yyyy-MM-dd")}
+                              onChange={(newDate) => {
+                                if (newDate) {
+                                  void handleUpdateAbonoDate(abono.id, newDate)
+                                }
+                                setEditingAbonoId(null)
+                              }}
+                              allowClear={false}
+                              className="h-8 text-xs max-w-[150px]"
+                            />
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 shrink-0"
+                              onClick={() => setEditingAbonoId(null)}
+                            >
+                              <XIcon className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1.5 mt-1 group/date">
+                            <p className="text-xs text-muted-foreground">
+                              {format(new Date(abono.fecha_pago), "d MMM yyyy 'a las' HH:mm", {
+                                locale: es,
+                              })}
+                            </p>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-5 w-5 opacity-0 group-hover/date:opacity-100 transition-opacity"
+                              onClick={() => setEditingAbonoId(abono.id)}
+                              title="Editar fecha de pago"
+                            >
+                              <PencilIcon className="h-3 w-3 text-muted-foreground" />
+                            </Button>
+                          </div>
+                        )}
                       </div>
 
                       <div className="text-right">
@@ -221,6 +414,56 @@ export function ManageExpensePaymentsDialog({
                         <RotateCcwIcon className="h-3.5 w-3.5" />
                         Revertir
                       </Button>
+                    </div>
+
+                    <div className="mt-2 flex items-center justify-between gap-2 border-t border-border/40 pt-2.5">
+                      <div className="flex items-center gap-2 w-full">
+                        {abono.voucher_path ? (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="h-8 text-xs gap-1"
+                            onClick={() => handleOpenVoucher(abono)}
+                            disabled={viewingAbonoId === abono.id}
+                          >
+                            {viewingAbonoId === abono.id ? (
+                              <Loader2Icon className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <ExternalLinkIcon className="h-3.5 w-3.5" />
+                            )}
+                            Ver Comprobante
+                          </Button>
+                        ) : (
+                          <span className="text-[11px] text-muted-foreground italic">Sin comprobante</span>
+                        )}
+
+                        <Label
+                          htmlFor={`voucher-${abono.id}`}
+                          className={cn(
+                            'inline-flex h-8 cursor-pointer items-center justify-center gap-1.5 rounded-md border border-input bg-background px-3 text-xs font-medium shadow-xs transition-colors hover:bg-accent hover:text-accent-foreground',
+                            attachingAbonoId === abono.id && 'pointer-events-none opacity-60'
+                          )}
+                        >
+                          {attachingAbonoId === abono.id ? (
+                            <Loader2Icon className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <PaperclipIcon className="h-3.5 w-3.5" />
+                          )}
+                          {abono.voucher_path ? 'Cambiar' : 'Adjuntar'}
+                        </Label>
+                        <Input
+                          id={`voucher-${abono.id}`}
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp"
+                          className="hidden"
+                          disabled={attachingAbonoId === abono.id}
+                          onChange={(event) => {
+                            void handleAttachVoucher(abono, event.target.files?.[0] ?? null)
+                            event.target.value = ''
+                          }}
+                        />
+                      </div>
                     </div>
                   </div>
                 ))}
