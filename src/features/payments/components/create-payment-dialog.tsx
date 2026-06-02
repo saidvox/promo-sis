@@ -162,7 +162,10 @@ export function CreatePaymentDialog({
       .update(voucherData)
       .eq('id', movementId)
 
-    if (error) throw error
+    if (error) {
+      await supabase.storage.from(VOUCHER_BUCKET).remove([voucherData.voucher_path])
+      throw error
+    }
 
     if (previousPath) {
       await supabase.storage.from(VOUCHER_BUCKET).remove([previousPath])
@@ -201,40 +204,13 @@ export function CreatePaymentDialog({
     setIsSubmitting(true)
 
     try {
-      const { error: deleteError } = await supabase
-        .from('pago_movimientos')
-        .delete()
-        .eq('id', movement.id)
+      const { data: voucherPath, error: deleteError } = await supabase
+        .rpc('eliminar_abono_manual', { p_movement_id: movement.id })
 
       if (deleteError) throw deleteError
 
-      if (pagoExistente) {
-        const nuevoTotal = Math.max(0, totalPagado - Number(movement.monto))
-        const nuevoEstado = nuevoTotal >= meta ? 'Pagado' : 'Pendiente'
-
-        if (nuevoTotal <= 0) {
-          const { error: deletePagoError } = await supabase
-            .from('pagos')
-            .delete()
-            .eq('id', pagoExistente.id)
-
-          if (deletePagoError) throw deletePagoError
-        } else {
-          const { error: updatePagoError } = await supabase
-            .from('pagos')
-            .update({
-              monto_pagado: nuevoTotal,
-              estado: nuevoEstado,
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', pagoExistente.id)
-
-          if (updatePagoError) throw updatePagoError
-        }
-      }
-
-      if (movement.voucher_path) {
-        await supabase.storage.from(VOUCHER_BUCKET).remove([movement.voucher_path])
+      if (voucherPath) {
+        await supabase.storage.from(VOUCHER_BUCKET).remove([voucherPath])
       }
 
       toast.success('Abono eliminado correctamente')
@@ -267,30 +243,13 @@ export function CreatePaymentDialog({
 
     try {
       const { error: updateError } = await supabase
-        .from('pago_movimientos')
-        .update({
-          monto: nuevoMonto,
-          nota: editNota,
-          updated_at: new Date().toISOString()
+        .rpc('actualizar_abono_manual', {
+          p_movement_id: movement.id,
+          p_monto: nuevoMonto,
+          p_nota: editNota,
         })
-        .eq('id', movement.id)
 
       if (updateError) throw updateError
-
-      if (pagoExistente) {
-        const nuevoEstado = nuevoTotal >= meta ? 'Pagado' : 'Pendiente'
-
-        const { error: updatePagoError } = await supabase
-          .from('pagos')
-          .update({
-            monto_pagado: nuevoTotal,
-            estado: nuevoEstado,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', pagoExistente.id)
-
-        if (updatePagoError) throw updatePagoError
-      }
 
       toast.success('Abono actualizado correctamente')
       refreshPaymentData()
@@ -317,70 +276,39 @@ export function CreatePaymentDialog({
       return
     }
 
-    const nuevoTotal = totalPagado + incremento
-    // Estado eval: si el nuevo total llega a la cuota, es 'Pagado', sino 'Pendiente'
-    const nuevoEstado = nuevoTotal >= meta ? 'Pagado' : 'Pendiente'
-
     setIsSubmitting(true)
+    let uploadedVoucherPath: string | null = null
 
     try {
-      let paymentId = pagoExistente?.id
+      const movementId = crypto.randomUUID()
+      const voucherData = voucherFile ? await uploadVoucher(movementId, voucherFile) : null
+      uploadedVoucherPath = voucherData?.voucher_path ?? null
 
-      if (pagoExistente) {
-        // Upsert / Update
-        const { error } = await supabase
-          .from('pagos')
-          .update({
-            monto_pagado: nuevoTotal,
-            estado: nuevoEstado,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', pagoExistente.id)
+      const now = new Date()
+      const timeString = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`
+      const localDateTimeStr = `${fechaAbono}T${timeString}`
+      const customCreatedAt = new Date(localDateTimeStr).toISOString()
 
-        if (error) throw error
-      } else {
-        // Insert new
-        const { data, error } = await supabase
-          .from('pagos')
-          .insert({
-            perfil_id: perfil.id,
-            cuota_id: cuota.id,
-            monto_pagado: nuevoTotal,
-            estado: nuevoEstado
-          })
-          .select()
-          .single()
+      const { error } = await supabase.rpc('registrar_abono_manual', {
+        p_movement_id: movementId,
+        p_perfil_id: perfil.id,
+        p_cuota_id: cuota.id,
+        p_monto: incremento,
+        p_nota: 'Abono manual registrado desde matriz de pagos',
+        p_created_at: customCreatedAt,
+        ...(voucherData ?? {}),
+      })
 
-        if (error) throw error
-        paymentId = data.id
-      }
-
-      if (paymentId) {
-        const movementId = crypto.randomUUID()
-        const voucherData = voucherFile ? await uploadVoucher(movementId, voucherFile) : {}
-
-        const now = new Date()
-        const timeString = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`
-        const localDateTimeStr = `${fechaAbono}T${timeString}`
-        const customCreatedAt = new Date(localDateTimeStr).toISOString()
-
-        await insertMovement({
-          id: movementId,
-          pago_id: paymentId,
-          perfil_id: perfil.id,
-          cuota_id: cuota.id,
-          origen: 'manual',
-          monto: incremento,
-          nota: 'Abono manual registrado desde matriz de pagos',
-          created_at: customCreatedAt,
-          ...voucherData,
-        })
-      }
+      if (error) throw error
+      uploadedVoucherPath = null
 
       toast.success('Abono registrado correctamente')
       refreshPaymentData()
       onOpenChange(false)
     } catch (error: any) {
+      if (uploadedVoucherPath) {
+        await supabase.storage.from(VOUCHER_BUCKET).remove([uploadedVoucherPath])
+      }
       toast.error(error.message || 'Error al registrar el abono')
     } finally {
       setIsSubmitting(false)
@@ -427,9 +355,11 @@ export function CreatePaymentDialog({
 
     const movementId = crypto.randomUUID()
     setAttachingMovementId('legacy')
+    let uploadedVoucherPath: string | null = null
 
     try {
       const voucherData = await uploadVoucher(movementId, file)
+      uploadedVoucherPath = voucherData.voucher_path
       await insertMovement({
         id: movementId,
         pago_id: pagoExistente.id,
@@ -438,12 +368,17 @@ export function CreatePaymentDialog({
         origen: 'manual',
         monto: totalPagado,
         nota: 'Pago registrado previamente',
+        es_ajuste_historico: true,
         ...voucherData,
       })
+      uploadedVoucherPath = null
 
       toast.success('Comprobante adjuntado al pago existente')
       refreshPaymentData()
     } catch (error: any) {
+      if (uploadedVoucherPath) {
+        await supabase.storage.from(VOUCHER_BUCKET).remove([uploadedVoucherPath])
+      }
       toast.error(error.message || 'No se pudo adjuntar el comprobante')
     } finally {
       setAttachingMovementId(null)
@@ -615,7 +550,7 @@ export function CreatePaymentDialog({
                           <p className="text-xs text-muted-foreground">
                             {format(new Date(movement.created_at), "d MMM yyyy, HH:mm", { locale: es })}
                           </p>
-                          {movement.origen === 'manual' && (
+                          {movement.origen === 'manual' && !movement.es_ajuste_historico && (
                             <Button
                               type="button"
                               variant="ghost"
@@ -668,7 +603,7 @@ export function CreatePaymentDialog({
                           event.target.value = ''
                         }}
                       />
-                      {movement.origen === 'manual' && (
+                      {movement.origen === 'manual' && !movement.es_ajuste_historico && (
                         <>
                           <Button
                             type="button"

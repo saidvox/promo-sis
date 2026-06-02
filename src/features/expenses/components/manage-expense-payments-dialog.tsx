@@ -132,8 +132,10 @@ export function ManageExpensePaymentsDialog({
     if (!file) return
 
     setAttachingAbonoId(abono.id)
+    let uploadedVoucherPath: string | null = null
     try {
       const voucherData = await uploadVoucher(abono.id, file)
+      uploadedVoucherPath = voucherData.voucher_path
       
       const { error: updateError } = await supabase
         .from('abonos_egresos')
@@ -141,6 +143,11 @@ export function ManageExpensePaymentsDialog({
         .eq('id', abono.id)
 
       if (updateError) throw updateError
+      uploadedVoucherPath = null
+
+      if (abono.voucher_path) {
+        await supabase.storage.from(VOUCHER_BUCKET).remove([abono.voucher_path])
+      }
 
       toast.success('Comprobante adjuntado correctamente')
       
@@ -154,6 +161,9 @@ export function ManageExpensePaymentsDialog({
 
       mutate('api/expenses')
     } catch (error: any) {
+      if (uploadedVoucherPath) {
+        await supabase.storage.from(VOUCHER_BUCKET).remove([uploadedVoucherPath])
+      }
       toast.error(error.message || 'No se pudo adjuntar el comprobante')
     } finally {
       setAttachingAbonoId(null)

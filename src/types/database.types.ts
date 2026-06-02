@@ -393,6 +393,7 @@ export type Database = {
           actividad_participante_id: string | null
           created_at: string
           cuota_id: string
+          es_ajuste_historico: boolean
           id: string
           monto: number
           nota: string | null
@@ -410,6 +411,7 @@ export type Database = {
           actividad_participante_id?: string | null
           created_at?: string
           cuota_id: string
+          es_ajuste_historico?: boolean
           id?: string
           monto: number
           nota?: string | null
@@ -427,6 +429,7 @@ export type Database = {
           actividad_participante_id?: string | null
           created_at?: string
           cuota_id?: string
+          es_ajuste_historico?: boolean
           id?: string
           monto?: number
           nota?: string | null
@@ -569,7 +572,31 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      actualizar_abono_manual: {
+        Args: { p_movement_id: string; p_monto: number; p_nota: string }
+        Returns: undefined
+      }
+      eliminar_abono_manual: {
+        Args: { p_movement_id: string }
+        Returns: string
+      }
       es_super_admin: { Args: never; Returns: boolean }
+      registrar_abono_manual: {
+        Args: {
+          p_created_at: string
+          p_cuota_id: string
+          p_movement_id: string
+          p_monto: number
+          p_nota: string
+          p_perfil_id: string
+          p_voucher_filename?: string
+          p_voucher_mime_type?: string
+          p_voucher_path?: string
+          p_voucher_size?: number
+          p_voucher_uploaded_at?: string
+        }
+        Returns: string
+      }
     }
     Enums: {
       estado_pago: "Pendiente" | "Pagado" | "Rechazado"

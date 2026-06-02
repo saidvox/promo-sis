@@ -123,9 +123,12 @@ export function PayExpenseDialog({ open, onOpenChange, egreso, saldoDisponible }
     }
 
     setIsSubmitting(true)
+    let uploadedVoucherPath: string | null = null
+    let voucherPersisted = false
     try {
       const movementId = crypto.randomUUID()
-      const voucherData = voucherFile ? await uploadVoucher(movementId, voucherFile) : {}
+      const voucherData = voucherFile ? await uploadVoucher(movementId, voucherFile) : null
+      uploadedVoucherPath = voucherData?.voucher_path ?? null
 
       const now = new Date()
       const timeString = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`
@@ -139,10 +142,11 @@ export function PayExpenseDialog({ open, onOpenChange, egreso, saldoDisponible }
           egreso_id: egreso.id,
           monto_abono: montoAbonoNum,
           fecha_pago: customFechaPago,
-          ...voucherData
+          ...(voucherData ?? {})
         })
 
       if (abonoError) throw abonoError
+      voucherPersisted = true
 
       const nuevoTotalPagado = pagadoAcumulado + montoAbonoNum
       const nuevoEstado = nuevoTotalPagado >= egreso.monto ? 'Pagado' : 'Pendiente'
@@ -158,6 +162,9 @@ export function PayExpenseDialog({ open, onOpenChange, egreso, saldoDisponible }
       mutate('api/dashboard-stats')
       onOpenChange(false)
     } catch (error: unknown) {
+      if (uploadedVoucherPath && !voucherPersisted) {
+        await supabase.storage.from(VOUCHER_BUCKET).remove([uploadedVoucherPath])
+      }
       toast.error(getErrorMessage(error, 'Error al procesar el pago'))
     } finally {
       setIsSubmitting(false)
