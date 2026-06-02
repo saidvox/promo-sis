@@ -296,7 +296,11 @@ export function CreatePaymentDialog({
         p_monto: incremento,
         p_nota: 'Abono manual registrado desde matriz de pagos',
         p_created_at: customCreatedAt,
-        ...(voucherData ?? {}),
+        p_voucher_path: voucherData?.voucher_path,
+        p_voucher_filename: voucherData?.voucher_filename,
+        p_voucher_mime_type: voucherData?.voucher_mime_type,
+        p_voucher_size: voucherData?.voucher_size,
+        p_voucher_uploaded_at: voucherData?.voucher_uploaded_at,
       })
 
       if (error) throw error
