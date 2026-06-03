@@ -9,6 +9,7 @@ export type AuthContextValue = {
   session: Session | null
   profile: UserProfile | null
   isInitializing: boolean
+  isProfileLoading: boolean
   refreshProfile: () => Promise<void>
 }
 
@@ -18,8 +19,10 @@ export function AuthProvider({ children }: { readonly children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [isInitializing, setIsInitializing] = useState(true)
+  const [isProfileLoading, setIsProfileLoading] = useState(false)
 
   const fetchProfile = async (userId: string) => {
+    setIsProfileLoading(true)
     try {
       const { data, error } = await supabase
         .from('perfiles')
@@ -32,6 +35,8 @@ export function AuthProvider({ children }: { readonly children: ReactNode }) {
     } catch (error) {
       console.error('Error fetching profile:', error)
       setProfile(null)
+    } finally {
+      setIsProfileLoading(false)
     }
   }
 
@@ -44,6 +49,7 @@ export function AuthProvider({ children }: { readonly children: ReactNode }) {
         void fetchProfile(session.user.id)
       } else {
         setProfile(null)
+        setIsProfileLoading(false)
       }
     })
 
@@ -57,6 +63,7 @@ export function AuthProvider({ children }: { readonly children: ReactNode }) {
         void fetchProfile(session.user.id)
       } else {
         setProfile(null)
+        setIsProfileLoading(false)
       }
     })
 
@@ -68,12 +75,13 @@ export function AuthProvider({ children }: { readonly children: ReactNode }) {
       session,
       profile,
       isInitializing,
+      isProfileLoading,
       refreshProfile: async () => {
         if (!session?.user) return
         await fetchProfile(session.user.id)
       },
     }),
-    [session, profile, isInitializing]
+    [session, profile, isInitializing, isProfileLoading]
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

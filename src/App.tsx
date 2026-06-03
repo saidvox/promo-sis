@@ -70,7 +70,7 @@ function App() {
 }
 
 function AppContent() {
-  const { session, profile, isInitializing } = useAuth()
+  const { session, profile, isInitializing, isProfileLoading } = useAuth()
 
   if (isInitializing) {
     return (
@@ -92,7 +92,7 @@ function AppContent() {
           <Toaster position="top-center" />
           {!session ? (
             <LoginPage />
-          ) : !profile ? (
+          ) : isProfileLoading ? (
             <div className="flex min-h-screen items-center justify-center bg-background">
               <div className="animate-pulse space-y-4 text-center">
                 <div className="mx-auto h-12 w-12 rounded-full bg-muted" />
@@ -101,7 +101,7 @@ function AppContent() {
                 </p>
               </div>
             </div>
-          ) : !profile.username ? (
+          ) : !profile?.username ? (
             <UsernameSetupPage />
           ) : (
             <NavigationProvider>

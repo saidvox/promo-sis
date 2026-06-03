@@ -25,17 +25,37 @@ export function UsernameSetupPage() {
       return
     }
 
-    if (!session?.user || !profile) {
+    if (!session?.user) {
       toast.error('No se pudo identificar tu sesión.')
       return
     }
 
     setIsSaving(true)
     try {
-      const { error } = await supabase
-        .from('perfiles')
-        .update({ username: normalizedUsername, updated_at: new Date().toISOString() })
-        .eq('id', session.user.id)
+      const displayName =
+        profile?.nombre_completo ||
+        session.user.user_metadata?.full_name ||
+        session.user.email?.split('@')[0] ||
+        normalizedUsername
+      const fallbackCode = `AUTH-${session.user.id.slice(0, 8).toUpperCase()}`
+      const now = new Date().toISOString()
+
+      const { error } = profile
+        ? await supabase
+            .from('perfiles')
+            .update({ username: normalizedUsername, updated_at: now })
+            .eq('id', session.user.id)
+        : await supabase
+            .from('perfiles')
+            .upsert({
+              id: session.user.id,
+              username: normalizedUsername,
+              nombre_completo: displayName,
+              codigo_u: fallbackCode,
+              rol: 'Alumno',
+              activo: true,
+              updated_at: now,
+            })
 
       if (error) {
         if (error.code === '23505') {
@@ -48,7 +68,7 @@ export function UsernameSetupPage() {
         action: 'profile.username_set',
         entityType: 'perfil',
         entityId: session.user.id,
-        summary: `${profile.nombre_completo} configuró su username @${normalizedUsername}`,
+        summary: `${displayName} configuro su username @${normalizedUsername}`,
         metadata: { username: normalizedUsername },
         afterData: { username: normalizedUsername },
       })
