@@ -48,6 +48,18 @@ function getActivityStatusClass(status: ActividadRow['estado']) {
   return "bg-muted text-muted-foreground border-border/50"
 }
 
+function isManualIncomeActivity(activity: ActividadRow) {
+  return activity.tipo_actividad === 'aporte_manual'
+}
+
+function getActivityMeta(activity: ActividadRow) {
+  if (isManualIncomeActivity(activity)) {
+    return 'Ingreso directo'
+  }
+
+  return `${activity.etiqueta_unidad}: S/ ${Number(activity.precio_unitario).toFixed(2)} - minimo ${activity.minimo_unidades_beneficio}`
+}
+
 export function ActivitiesTable() {
   const { data, isLoading, error, deleteActivity, updateActivity, revertActivity } = useActivities()
   const { mutate } = useSWRConfig()
@@ -164,7 +176,9 @@ export function ActivitiesTable() {
                   {act.descripcion && (
                     <p className="text-xs text-muted-foreground line-clamp-1">{act.descripcion}</p>
                   )}
-                  {(act.usa_grupos || act.usa_premios) && (
+                  {isManualIncomeActivity(act) ? (
+                    <p className="pt-1 text-[10px] text-muted-foreground">{getActivityMeta(act)}</p>
+                  ) : (act.usa_grupos || act.usa_premios) && (
                     <div className="flex items-center gap-1 pt-1 text-[10px] text-muted-foreground">
                       <UsersIcon className="h-3 w-3" />
                       {act.usa_grupos ? 'Con grupos' : 'Sin grupos'}
@@ -219,7 +233,7 @@ export function ActivitiesTable() {
                       <span className="leading-none mt-[1px]">Ver detalles</span>
                     </Button>
                   )}
-                  {act.estado === 'Finalizada' && (
+                  {act.estado === 'Finalizada' && !isManualIncomeActivity(act) && (
                     <Button
                       variant="ghost"
                       size="sm"
@@ -231,7 +245,7 @@ export function ActivitiesTable() {
                       <span className="leading-none mt-[1px]">Revertir</span>
                     </Button>
                   )}
-                  {act.estado === 'Finalizada' && (
+                  {act.estado === 'Finalizada' && !isManualIncomeActivity(act) && (
                     <Button
                       variant="outline"
                       size="sm"
@@ -243,7 +257,7 @@ export function ActivitiesTable() {
                     </Button>
                   )}
                   
-                  {act.estado !== 'Finalizada' && (
+                  {(act.estado !== 'Finalizada' || isManualIncomeActivity(act)) && (
                     <Button
                       variant="ghost"
                       size="icon"
@@ -309,11 +323,15 @@ export function ActivitiesTable() {
                       {act.descripcion && (
                         <span className="text-xs text-muted-foreground line-clamp-1">{act.descripcion}</span>
                       )}
+                      {isManualIncomeActivity(act) ? (
+                        <span className="text-[11px] text-muted-foreground">{getActivityMeta(act)}</span>
+                      ) : (
                       <span className="text-[11px] text-muted-foreground">
                         {act.etiqueta_unidad}: S/ {Number(act.precio_unitario).toFixed(2)} · minimo {act.minimo_unidades_beneficio}
                         {act.usa_grupos ? ' · grupos' : ''}
                         {act.usa_premios ? ' · premios externos' : ''}
                       </span>
+                      )}
                     </div>
                   </TableCell>
                   <TableCell className="text-muted-foreground text-sm">
@@ -364,7 +382,7 @@ export function ActivitiesTable() {
                           <span className="leading-none mt-[1px]">Ver detalles</span>
                         </Button>
                       )}
-                      {act.estado === 'Finalizada' && (
+                      {act.estado === 'Finalizada' && !isManualIncomeActivity(act) && (
                         <Button
                           variant="ghost"
                           size="sm"
@@ -376,7 +394,7 @@ export function ActivitiesTable() {
                           <span className="leading-none mt-[1px]">Revertir</span>
                         </Button>
                       )}
-                      {act.estado === 'Finalizada' && (
+                      {act.estado === 'Finalizada' && !isManualIncomeActivity(act) && (
                         <Button
                           variant="outline"
                           size="sm"
@@ -388,7 +406,7 @@ export function ActivitiesTable() {
                         </Button>
                       )}
 
-                      {act.estado !== 'Finalizada' && (
+                      {(act.estado !== 'Finalizada' || isManualIncomeActivity(act)) && (
                         <Button
                           variant="ghost"
                           size="icon"

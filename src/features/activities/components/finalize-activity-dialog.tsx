@@ -112,7 +112,7 @@ export function FinalizeActivityDialog({ open, onOpenChange, activity }: Finaliz
   const draftSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
-    if (!open || !activity) return
+    if (!open || !activity || activity.tipo_actividad === 'aporte_manual') return
 
     const load = async () => {
       setIsLoading(true)
@@ -677,6 +677,32 @@ export function FinalizeActivityDialog({ open, onOpenChange, activity }: Finaliz
   }
 
   if (!activity) return null
+
+  if (activity.tipo_actividad === 'aporte_manual') {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="sm:max-w-[420px]">
+          <DialogHeader>
+            <DialogTitle>{activity.nombre}</DialogTitle>
+            <DialogDescription>
+              Ingreso directo registrado para la promocion.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="rounded-lg border bg-muted/20 p-4">
+            <p className="text-xs text-muted-foreground">Monto recaudado</p>
+            <p className="text-2xl font-bold text-emerald-600">
+              S/ {Number(activity.monto_recaudado).toFixed(2)}
+            </p>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Cerrar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    )
+  }
 
   const quotaLabel = (quotaId: string) => {
     if (quotaId === NO_QUOTA) return 'Sin aplicar'

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Loader2Icon, PlusIcon } from 'lucide-react'
+import { useSWRConfig } from 'swr'
 import { toast } from 'sonner'
 import { getErrorMessage } from '@/lib/error-utils'
 import { cn } from '@/lib/utils'
@@ -19,16 +20,22 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
+
+type ActivityFormType = 'venta_unidades' | 'aporte_manual'
 
 export function CreateActivityDialog({ className }: { readonly className?: string }) {
   const [open, setOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const { createActivity } = useActivities()
+  const { mutate } = useSWRConfig()
 
+  const [tipoActividad, setTipoActividad] = useState<ActivityFormType>('venta_unidades')
   const [nombre, setNombre] = useState('')
   const [descripcion, setDescripcion] = useState('')
   const [fechaEvento, setFechaEvento] = useState('')
+  const [montoRecaudado, setMontoRecaudado] = useState<number | ''>('')
   const [etiquetaUnidad, setEtiquetaUnidad] = useState('rifas')
   const [precioUnitario, setPrecioUnitario] = useState<number | ''>(7)
   const [minimoUnidades, setMinimoUnidades] = useState<number | ''>(5)
@@ -38,9 +45,11 @@ export function CreateActivityDialog({ className }: { readonly className?: strin
   const [usaPremios, setUsaPremios] = useState(true)
 
   const resetForm = () => {
+    setTipoActividad('venta_unidades')
     setNombre('')
     setDescripcion('')
     setFechaEvento('')
+    setMontoRecaudado('')
     setEtiquetaUnidad('rifas')
     setPrecioUnitario(7)
     setMinimoUnidades(5)
@@ -58,7 +67,55 @@ export function CreateActivityDialog({ className }: { readonly className?: strin
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!nombre.trim() || !fechaEvento || !etiquetaUnidad.trim()) {
+    if (!nombre.trim() || !fechaEvento) {
+      toast.error('Completa el nombre y la fecha de la actividad.')
+      return
+    }
+
+    if (tipoActividad === 'aporte_manual') {
+      const income = Number(montoRecaudado)
+
+      if (income <= 0) {
+        toast.error('El monto recaudado debe ser mayor que 0.')
+        return
+      }
+
+      setIsSubmitting(true)
+
+      try {
+        await createActivity({
+          nombre: nombre.trim(),
+          descripcion: descripcion.trim() || null,
+          estado: 'Finalizada',
+          monto_recaudado: income,
+          fecha_evento: fechaEvento,
+          tipo_actividad: 'aporte_manual',
+          etiqueta_unidad: 'ingreso',
+          precio_unitario: 0,
+          minimo_unidades_beneficio: 0,
+          monto_promocion_unitario: 0,
+          monto_beneficio_unitario: 0,
+          usa_grupos: false,
+          usa_premios: false,
+          total_bruto: income,
+          total_promocion: income,
+          total_beneficio: 0,
+          total_premios_externos: 0,
+        })
+
+        mutate('api/dashboard-stats')
+        mutate('api/expenses')
+        toast.success('Ingreso simple registrado correctamente')
+        handleOpenChange(false)
+      } catch (error: unknown) {
+        toast.error(getErrorMessage(error, 'Error al registrar ingreso simple'))
+      } finally {
+        setIsSubmitting(false)
+      }
+      return
+    }
+
+    if (!etiquetaUnidad.trim()) {
       toast.error('Completa el nombre, la fecha y la unidad de venta.')
       return
     }
@@ -91,6 +148,8 @@ export function CreateActivityDialog({ className }: { readonly className?: strin
         usa_premios: usaPremios,
       })
 
+      mutate('api/dashboard-stats')
+      mutate('api/expenses')
       toast.success('Actividad registrada correctamente')
       handleOpenChange(false)
     } catch (error: unknown) {
@@ -112,17 +171,34 @@ export function CreateActivityDialog({ className }: { readonly className?: strin
           <DialogHeader>
             <DialogTitle>Registrar actividad</DialogTitle>
             <DialogDescription>
-              Define reglas de venta, beneficio y organizacion antes de registrar resultados.
+              Registra rifas, ventas por unidades o ingresos directos de recaudacion.
             </DialogDescription>
           </DialogHeader>
 
           <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="tipo-actividad">Tipo de actividad</Label>
+              <Select
+                value={tipoActividad}
+                onValueChange={(value) => setTipoActividad((value ?? 'venta_unidades') as ActivityFormType)}
+                disabled={isSubmitting}
+              >
+                <SelectTrigger id="tipo-actividad" className="w-full">
+                  <span>{tipoActividad === 'aporte_manual' ? 'Ingreso simple' : 'Venta por unidades'}</span>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="venta_unidades">Venta por unidades</SelectItem>
+                  <SelectItem value="aporte_manual">Ingreso simple</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="grid gap-4 sm:grid-cols-[1fr_180px]">
               <div className="grid gap-2">
                 <Label htmlFor="nombre">Nombre de la actividad</Label>
                 <Input
                   id="nombre"
-                  placeholder="Ej: Rifa Dia de la Madre"
+                  placeholder={tipoActividad === 'aporte_manual' ? 'Ej: Venta de comida' : 'Ej: Rifa Dia de la Madre'}
                   value={nombre}
                   onChange={(e) => setNombre(e.target.value)}
                   disabled={isSubmitting}
@@ -155,6 +231,28 @@ export function CreateActivityDialog({ className }: { readonly className?: strin
               />
             </div>
 
+            {tipoActividad === 'aporte_manual' && (
+              <div className="rounded-lg border bg-muted/20 p-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="monto-recaudado">Monto recaudado (S/)</Label>
+                  <Input
+                    id="monto-recaudado"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    inputMode="decimal"
+                    value={montoRecaudado}
+                    onChange={(e) => setMontoRecaudado(e.target.value ? Number(e.target.value) : '')}
+                    disabled={isSubmitting}
+                  />
+                </div>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Este ingreso quedara finalizado y sumara al saldo de la promocion inmediatamente.
+                </p>
+              </div>
+            )}
+
+            {tipoActividad === 'venta_unidades' && (
             <div className="rounded-lg border bg-muted/20 p-4">
               <div className="mb-4">
                 <h4 className="text-sm font-semibold">Reglas de venta y beneficio</h4>
@@ -240,13 +338,22 @@ export function CreateActivityDialog({ className }: { readonly className?: strin
                 </label>
               </div>
             </div>
+            )}
           </div>
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => handleOpenChange(false)} disabled={isSubmitting}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={isSubmitting || !nombre.trim() || !fechaEvento}>
+            <Button
+              type="submit"
+              disabled={
+                isSubmitting ||
+                !nombre.trim() ||
+                !fechaEvento ||
+                (tipoActividad === 'aporte_manual' && Number(montoRecaudado) <= 0)
+              }
+            >
               {isSubmitting ? (
                 <>
                   <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />

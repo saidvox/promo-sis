@@ -34,6 +34,7 @@ export function EditActivityDialog({ open, onOpenChange, activity }: EditActivit
   const [nombre, setNombre] = useState('')
   const [descripcion, setDescripcion] = useState('')
   const [fechaEvento, setFechaEvento] = useState('')
+  const [montoRecaudado, setMontoRecaudado] = useState<number | ''>('')
   const [etiquetaUnidad, setEtiquetaUnidad] = useState('unidades')
   const [precioUnitario, setPrecioUnitario] = useState<number | ''>('')
   const [minimoUnidades, setMinimoUnidades] = useState<number | ''>('')
@@ -41,12 +42,14 @@ export function EditActivityDialog({ open, onOpenChange, activity }: EditActivit
   const [montoBeneficio, setMontoBeneficio] = useState<number | ''>('')
   const [usaGrupos, setUsaGrupos] = useState(false)
   const [usaPremios, setUsaPremios] = useState(false)
+  const isManualIncome = activity?.tipo_actividad === 'aporte_manual'
 
   useEffect(() => {
     if (open && activity) {
       setNombre(activity.nombre)
       setDescripcion(activity.descripcion || '')
       setFechaEvento(activity.fecha_evento)
+      setMontoRecaudado(Number(activity.monto_recaudado || 0))
       setEtiquetaUnidad(activity.etiqueta_unidad || 'unidades')
       setPrecioUnitario(Number(activity.precio_unitario || 0))
       setMinimoUnidades(Number(activity.minimo_unidades_beneficio || 0))
@@ -60,8 +63,56 @@ export function EditActivityDialog({ open, onOpenChange, activity }: EditActivit
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!activity || !nombre.trim() || !fechaEvento || !etiquetaUnidad.trim()) {
-      toast.error('Completa el nombre, fecha y unidad de venta.')
+    if (!activity || !nombre.trim() || !fechaEvento) {
+      toast.error('Completa el nombre y la fecha de la actividad.')
+      return
+    }
+
+    if (isManualIncome) {
+      const income = Number(montoRecaudado)
+
+      if (income <= 0) {
+        toast.error('El monto recaudado debe ser mayor que 0.')
+        return
+      }
+
+      setIsSubmitting(true)
+
+      try {
+        await updateActivity(activity.id, {
+          nombre: nombre.trim(),
+          descripcion: descripcion.trim() || null,
+          fecha_evento: fechaEvento,
+          tipo_actividad: 'aporte_manual',
+          etiqueta_unidad: 'ingreso',
+          monto_recaudado: income,
+          total_bruto: income,
+          total_promocion: income,
+          total_beneficio: 0,
+          total_premios_externos: 0,
+          precio_unitario: 0,
+          minimo_unidades_beneficio: 0,
+          monto_promocion_unitario: 0,
+          monto_beneficio_unitario: 0,
+          usa_grupos: false,
+          usa_premios: false,
+        })
+
+        toast.success('Ingreso actualizado correctamente')
+        mutate('api/activities')
+        mutate('api/dashboard-stats')
+        mutate('api/expenses')
+        onOpenChange(false)
+      } catch (error: unknown) {
+        toast.error(getErrorMessage(error, 'Error al actualizar ingreso'))
+      } finally {
+        setIsSubmitting(false)
+      }
+      return
+    }
+
+    if (!etiquetaUnidad.trim()) {
+      toast.error('Completa la unidad de venta.')
       return
     }
 
@@ -111,7 +162,9 @@ export function EditActivityDialog({ open, onOpenChange, activity }: EditActivit
           <DialogHeader>
             <DialogTitle>Editar actividad</DialogTitle>
             <DialogDescription>
-              Modifica datos generales, reglas de venta, grupos y premios antes de finalizar.
+              {isManualIncome
+                ? 'Modifica los datos basicos y el monto del ingreso directo.'
+                : 'Modifica datos generales, reglas de venta, grupos y premios antes de finalizar.'}
             </DialogDescription>
           </DialogHeader>
 
@@ -151,6 +204,28 @@ export function EditActivityDialog({ open, onOpenChange, activity }: EditActivit
               />
             </div>
 
+            {isManualIncome && (
+              <div className="rounded-lg border bg-muted/20 p-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-monto-recaudado">Monto recaudado (S/)</Label>
+                  <Input
+                    id="edit-monto-recaudado"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    inputMode="decimal"
+                    value={montoRecaudado}
+                    onChange={(e) => setMontoRecaudado(e.target.value ? Number(e.target.value) : '')}
+                    disabled={isSubmitting}
+                  />
+                </div>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Este monto se considera ingreso de la promocion y se refleja en el saldo general.
+                </p>
+              </div>
+            )}
+
+            {!isManualIncome && (
             <div className="rounded-lg border bg-muted/20 p-4">
               <div className="mb-4">
                 <h4 className="text-sm font-semibold">Reglas de venta y beneficio</h4>
@@ -232,13 +307,17 @@ export function EditActivityDialog({ open, onOpenChange, activity }: EditActivit
                 </label>
               </div>
             </div>
+            )}
           </div>
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={isSubmitting || !nombre.trim() || !fechaEvento}>
+            <Button
+              type="submit"
+              disabled={isSubmitting || !nombre.trim() || !fechaEvento || (isManualIncome && Number(montoRecaudado) <= 0)}
+            >
               {isSubmitting ? (
                 <>
                   <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
