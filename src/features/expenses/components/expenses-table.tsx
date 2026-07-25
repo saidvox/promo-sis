@@ -1,7 +1,7 @@
 import { useState, useCallback, useMemo, lazy, Suspense } from 'react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { WalletIcon, BuildingIcon, PackageIcon, ClockIcon, Trash2Icon, PencilIcon, BanknoteIcon, HistoryIcon } from 'lucide-react'
+import { WalletIcon, BuildingIcon, PackageIcon, ClockIcon, Trash2Icon, PencilIcon, BanknoteIcon, HistoryIcon, EyeIcon } from 'lucide-react'
 import { useSWRConfig } from 'swr'
 import { supabase } from '@/lib/supabase/client'
 import { getErrorMessage } from '@/lib/error-utils'
@@ -14,6 +14,7 @@ const CreateExpenseDialog = lazy(() => import('./create-expense-dialog').then(m 
 const PayExpenseDialog = lazy(() => import('./pay-expense-dialog').then(m => ({ default: m.PayExpenseDialog })))
 const EditExpenseDialog = lazy(() => import('./edit-expense-dialog').then(m => ({ default: m.EditExpenseDialog })))
 const ManageExpensePaymentsDialog = lazy(() => import('./manage-expense-payments-dialog').then(m => ({ default: m.ManageExpensePaymentsDialog })))
+const ExpenseDetailsDialog = lazy(() => import('./expense-details-dialog').then(m => ({ default: m.ExpenseDetailsDialog })))
 
 import {
   Card,
@@ -86,6 +87,7 @@ export function ExpensesTable() {
   const [payingEgreso, setPayingEgreso] = useState<EgresoWithAbonos | null>(null)
   const [editingEgreso, setEditingEgreso] = useState<EgresoRow | null>(null)
   const [managingPaymentsEgreso, setManagingPaymentsEgreso] = useState<EgresoWithAbonos | null>(null)
+  const [viewingEgreso, setViewingEgreso] = useState<EgresoWithAbonos | null>(null)
   const [egresoToDelete, setEgresoToDelete] = useState<EgresoRow | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
 
@@ -259,13 +261,17 @@ export function ExpensesTable() {
               <div key={egreso.id} className="rounded-xl border bg-card p-4 space-y-3 shadow-sm">
                 {/* Header */}
                 <div className="flex items-start justify-between gap-2">
-                  <div className="space-y-0.5 min-w-0">
-                    <p className="font-semibold text-sm leading-tight">{egreso.concepto}</p>
+                  <div className="min-w-0 space-y-0.5 overflow-hidden">
+                    <p className="line-clamp-2 break-words font-semibold text-sm leading-tight [overflow-wrap:anywhere]">
+                      {egreso.concepto}
+                    </p>
                     {egreso.descripcion && (
-                      <p className="text-xs text-muted-foreground line-clamp-1">{egreso.descripcion}</p>
+                      <p className="line-clamp-2 break-words text-xs text-muted-foreground [overflow-wrap:anywhere]">
+                        {egreso.descripcion}
+                      </p>
                     )}
                     {egreso.actividades && (
-                      <p className="text-[10px] text-muted-foreground">
+                      <p className="truncate text-[10px] text-muted-foreground">
                         Actividad: {egreso.actividades.nombre}
                         {egreso.actividad_grupos ? ` · ${egreso.actividad_grupos.nombre}` : ''}
                       </p>
@@ -295,6 +301,15 @@ export function ExpensesTable() {
 
                 {/* Actions */}
                 <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-border/40">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 gap-1.5"
+                    onClick={() => setViewingEgreso(egreso)}
+                  >
+                    <EyeIcon className="h-3.5 w-3.5" />
+                    Detalles
+                  </Button>
                   {hasPayments && (
                     <Button
                       variant="outline"
@@ -353,7 +368,7 @@ export function ExpensesTable() {
 
       {/* DESKTOP TABLE VIEW */}
       <div className="hidden sm:block rounded-xl border bg-card shadow-sm">
-        <Table>
+        <Table className="table-fixed min-w-[940px]">
           <TableHeader>
             <TableRow>
               <TableHead>Concepto</TableHead>
@@ -361,7 +376,7 @@ export function ExpensesTable() {
               <TableHead className="w-[120px] text-right">Monto</TableHead>
               <TableHead className="w-[130px]">Fecha Prog.</TableHead>
               <TableHead className="w-[100px] text-center">Estado</TableHead>
-              <TableHead className="w-[220px] text-right">Acciones</TableHead>
+              <TableHead className="w-[260px] text-right">Acciones</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -391,14 +406,16 @@ export function ExpensesTable() {
 
                 return (
                   <TableRow key={egreso.id}>
-                    <TableCell>
-                      <div className="flex flex-col">
-                        <span className="font-medium">{egreso.concepto}</span>
+                    <TableCell className="max-w-0 overflow-hidden whitespace-normal">
+                      <div className="flex min-w-0 flex-col overflow-hidden">
+                        <span className="truncate font-medium">{egreso.concepto}</span>
                         {egreso.descripcion && (
-                          <span className="text-xs text-muted-foreground line-clamp-1">{egreso.descripcion}</span>
+                          <span className="truncate text-xs text-muted-foreground">
+                            {egreso.descripcion}
+                          </span>
                         )}
                         {egreso.actividades && (
-                          <span className="text-[10px] text-muted-foreground">
+                          <span className="truncate text-[10px] text-muted-foreground">
                             Actividad: {egreso.actividades.nombre}
                             {egreso.actividad_grupos ? ` · ${egreso.actividad_grupos.nombre}` : ''}
                           </span>
@@ -451,6 +468,16 @@ export function ExpensesTable() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          title="Ver detalles"
+                          aria-label={`Ver detalles de ${egreso.concepto}`}
+                          className="h-8 w-8 hover:bg-muted"
+                          onClick={() => setViewingEgreso(egreso)}
+                        >
+                          <EyeIcon className="h-3.5 w-3.5" />
+                        </Button>
                         {hasPayments && (
                           <Button
                             variant="ghost"
@@ -530,6 +557,12 @@ export function ExpensesTable() {
           open={managingPaymentsEgreso !== null}
           onOpenChange={(isOpen) => { if (!isOpen) setManagingPaymentsEgreso(null) }}
           egreso={managingPaymentsEgreso}
+        />
+
+        <ExpenseDetailsDialog
+          open={viewingEgreso !== null}
+          onOpenChange={(isOpen) => { if (!isOpen) setViewingEgreso(null) }}
+          egreso={viewingEgreso}
         />
       </Suspense>
 
