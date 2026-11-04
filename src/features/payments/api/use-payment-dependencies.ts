@@ -22,6 +22,7 @@ export const usePaymentDependencies = () => {
       supabase
         .from('perfiles')
         .select('id, nombre_completo, dni, codigo_u')
+        .eq('es_participante', true)
         .order('nombre_completo', { ascending: true }),
         
       supabase

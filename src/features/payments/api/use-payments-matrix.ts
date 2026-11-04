@@ -86,6 +86,7 @@ export const usePaymentsMatrix = () => {
       supabase
         .from('perfiles')
         .select('id, nombre_completo, dni, rol, codigo_u, activo')
+        .eq('es_participante', true)
         .order('nombre_completo', { ascending: true }),
         
       supabase
@@ -113,7 +114,7 @@ export const usePaymentsMatrix = () => {
     if (pagosResult.error) throw pagosResult.error
     if (movementsResult.error) throw movementsResult.error
 
-    // Ahora consideramos A TODOS los perfiles, para tener una matriz total
+    // Incluye participantes pendientes de inscripción para que puedan registrar su pago.
     const perfilesInscritos = perfilesResult.data as PerfilRow[]
 
     const inscripciones = (inscripcionesResult.data ?? []) as InscripcionLiteRow[]

@@ -54,6 +54,7 @@ export function UsernameSetupPage() {
               codigo_u: fallbackCode,
               rol: 'Alumno',
               activo: true,
+              es_participante: false,
               updated_at: now,
             })
 

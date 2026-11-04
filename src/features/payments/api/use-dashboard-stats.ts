@@ -88,7 +88,10 @@ export const useDashboardStats = () => {
       supabase.from('inscripciones').select('monto'),
       supabase.from('config_cuotas').select('id, monto').eq('activo', true),
       supabase.from('pagos').select('perfil_id, cuota_id, monto_pagado'),
-      supabase.from('inscripciones').select('perfil_id, perfiles!inner(activo)'),
+      supabase
+        .from('inscripciones')
+        .select('perfil_id, perfiles!inner(activo)')
+        .eq('perfiles.es_participante', true),
       supabase.from('actividades').select('total_promocion, total_beneficio, monto_recaudado'),
       supabase.from('abonos_egresos').select('monto_abono'),
       supabase.from('pago_movimientos').select('monto').eq('origen', 'beneficio_actividad'),

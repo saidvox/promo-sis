@@ -121,6 +121,7 @@ export function FinalizeActivityDialog({ open, onOpenChange, activity }: Finaliz
           supabase
             .from('perfiles')
             .select('id, nombre_completo, codigo_u, rol, inscripciones(id)')
+            .eq('es_participante', true)
             .eq('activo', true)
             .order('nombre_completo', { ascending: true }),
           supabase

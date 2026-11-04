@@ -17,6 +17,7 @@ export const useStudents = () => {
     const { data, error } = await supabase
       .from('perfiles')
       .select('*, inscripciones(id)')
+      .eq('es_participante', true)
       .order('nombre_completo', { ascending: true })
 
     if (error) {

@@ -588,6 +588,7 @@ export type Database = {
           codigo_u: string
           created_at: string | null
           dni: string | null
+          es_participante: boolean
           id: string
           nombre_completo: string
           rol: Database["public"]["Enums"]["user_role"] | null
@@ -601,6 +602,7 @@ export type Database = {
           codigo_u: string
           created_at?: string | null
           dni?: string | null
+          es_participante?: boolean
           id?: string
           nombre_completo: string
           rol?: Database["public"]["Enums"]["user_role"] | null
@@ -614,6 +616,7 @@ export type Database = {
           codigo_u?: string
           created_at?: string | null
           dni?: string | null
+          es_participante?: boolean
           id?: string
           nombre_completo?: string
           rol?: Database["public"]["Enums"]["user_role"] | null
