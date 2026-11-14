@@ -81,7 +81,8 @@ export const useDashboardStats = () => {
       inscritosRes,
       actividadesRes,
       abonosRes,
-      activityBenefitMovementsRes
+      activityBenefitMovementsRes,
+      extrasRes
     ] = await Promise.all([
       supabase.from('pagos').select('monto_pagado').neq('estado', 'Rechazado'),
       supabase.from('egresos').select('monto, estado'),
@@ -95,6 +96,7 @@ export const useDashboardStats = () => {
       supabase.from('actividades').select('total_promocion, total_beneficio, monto_recaudado'),
       supabase.from('abonos_egresos').select('monto_abono'),
       supabase.from('pago_movimientos').select('monto').eq('origen', 'beneficio_actividad'),
+      supabase.from('mesa_abonos').select('monto').eq('anulado', false),
     ])
 
     if (pagosRes.error) throw pagosRes.error
@@ -106,6 +108,7 @@ export const useDashboardStats = () => {
     if (actividadesRes.error) throw actividadesRes.error
     if (abonosRes.error) throw abonosRes.error
     if (activityBenefitMovementsRes.error) throw activityBenefitMovementsRes.error
+    if (extrasRes.error) throw extrasRes.error
 
     const totalPagos = pagosRes.data.reduce((acc, cur) => acc + cur.monto_pagado, 0)
     const totalInscripciones = inscripcionesRes.data.reduce((acc, cur) => acc + cur.monto, 0)
@@ -118,7 +121,8 @@ export const useDashboardStats = () => {
     const totalActivityPendingBenefit = Math.max(0, totalActivityBenefit - totalActivityBenefitApplied)
     const totalActividades = totalActivityPromotion + totalActivityPendingBenefit
     
-    const totalIncome = totalPagos + totalInscripciones + totalActividades
+    const totalExtras = extrasRes.data.reduce((total, payment) => total + Number(payment.monto), 0)
+    const totalIncome = totalPagos + totalInscripciones + totalActividades + totalExtras
     
     // El gasto real es la suma de todos los abonos realizados
     const totalExpenses = abonosRes.data.reduce((acc, cur) => acc + cur.monto_abono, 0)

@@ -1,5 +1,6 @@
 import type { MatrixData, MesAno } from '../api/use-payments-matrix'
 import { MESES_DEL_ANO } from '../api/use-payments-matrix'
+import { getParticipantTotals } from './participant-totals'
 
 const INSCRIPCION_AMOUNT = 100
 const MONEY_FORMAT = '"S/ "#,##0.00'
@@ -32,6 +33,10 @@ type ParticipantReportRow = {
   debt: number
   progress: number
   months: MonthDetail[]
+  extrasExpected: number
+  extrasPaid: number
+  totalPaid: number
+  totalDebt: number
 }
 
 function normalizePaidAmount(amount: number | null | undefined, rejected?: boolean) {
@@ -132,6 +137,7 @@ function buildReportRows(data: MatrixData): ParticipantReportRow[] {
       debt,
       progress: expected > 0 ? paid / expected : 0,
       months,
+      ...getParticipantTotals(data, profile.id),
     }
   })
 }
@@ -280,6 +286,10 @@ export async function exportPaymentsExcel(data: MatrixData) {
     'Deuda',
     'Avance',
     ...MESES_DEL_ANO,
+    'Costo extras',
+    'Abonado extras',
+    'Abonado general',
+    'Saldo general',
   ]
   matrix.getRow(5).values = matrixHeaders
   matrix.getRow(5).height = 24
@@ -305,6 +315,10 @@ export async function exportPaymentsExcel(data: MatrixData) {
         if (month.status === 'Sin configurar') return '-'
         return `${month.status} | S/ ${month.paid.toFixed(2)}`
       }),
+      row.extrasExpected,
+      row.extrasPaid,
+      row.totalPaid,
+      row.totalDebt,
     ]
 
     excelRow.getCell(5).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: statusFill(row.generalStatus) } }
@@ -313,6 +327,7 @@ export async function exportPaymentsExcel(data: MatrixData) {
     excelRow.getCell(7).numFmt = MONEY_FORMAT
     excelRow.getCell(8).numFmt = MONEY_FORMAT
     excelRow.getCell(9).numFmt = PERCENT_FORMAT
+    for (let column = 22; column <= 25; column++) excelRow.getCell(column).numFmt = MONEY_FORMAT
 
     row.months.forEach((month, monthIndex) => {
       const cell = excelRow.getCell(10 + monthIndex)
@@ -333,6 +348,7 @@ export async function exportPaymentsExcel(data: MatrixData) {
     { width: 13 },
     { width: 11 },
     ...MESES_DEL_ANO.map(() => ({ width: 16 })),
+    ...Array.from({ length: 4 }, () => ({ width: 18 })),
   ]
   matrix.eachRow((row, rowNumber) => {
     if (rowNumber < 5) return

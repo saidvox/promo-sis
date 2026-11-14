@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Trash2Icon, PhoneIcon, ChevronLeftIcon, ChevronRightIcon, SearchIcon } from 'lucide-react'
+import { Trash2Icon, PhoneIcon, ChevronLeftIcon, ChevronRightIcon, SearchIcon, UsersIcon } from 'lucide-react'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -32,6 +32,7 @@ import { recordAuditEvent } from '@/features/audit/api/audit-events'
 import { toAuditJson } from '@/features/audit/utils/audit-format'
 const CreateParticipantDialog = lazy(() => import('./create-participant-dialog').then(m => ({ default: m.CreateParticipantDialog })))
 const EditParticipantDialog = lazy(() => import('./edit-participant-dialog').then(m => ({ default: m.EditParticipantDialog })))
+const FamilyGuestsDrawer = lazy(() => import('@/features/mesas/components/family-guests-drawer').then(m => ({ default: m.FamilyGuestsDrawer })))
 
 const MOBILE_SKELETON_KEYS = ['mobile-participant-1', 'mobile-participant-2', 'mobile-participant-3', 'mobile-participant-4']
 const TABLE_SKELETON_KEYS = ['table-participant-1', 'table-participant-2', 'table-participant-3', 'table-participant-4', 'table-participant-5']
@@ -49,6 +50,8 @@ export function ParticipantsTable() {
   const [currentPage, setCurrentPage] = useState(1)
   const [participantToDelete, setParticipantToDelete] = useState<Perfil | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [guestProfile, setGuestProfile] = useState<Perfil | null>(null)
+  const [guestsOpen, setGuestsOpen] = useState(false)
 
   if (error) {
     return (
@@ -213,6 +216,7 @@ export function ParticipantsTable() {
 
               {/* Actions */}
               <div className="flex items-center gap-1 pt-1 border-t border-border/40">
+                <Button variant="outline" size="sm" onClick={() => { setGuestProfile(participant); setGuestsOpen(true) }}><UsersIcon data-icon="inline-start" />Invitados</Button>
                 <Suspense>
                   <EditParticipantDialog participant={participant} />
                 </Suspense>
@@ -293,6 +297,7 @@ export function ParticipantsTable() {
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right flex items-center justify-end gap-1">
+                    <Button variant="outline" size="sm" onClick={() => { setGuestProfile(participant); setGuestsOpen(true) }} aria-label={'Familia e invitados de ' + participant.nombre_completo}><UsersIcon data-icon="inline-start" />Invitados</Button>
                     <Suspense>
                       <EditParticipantDialog participant={participant} />
                     </Suspense>
@@ -369,6 +374,7 @@ export function ParticipantsTable() {
         </div>
       )}
 
+      <Suspense>{guestProfile && <FamilyGuestsDrawer key={guestProfile.id} profile={guestProfile} open={guestsOpen} onOpenChange={setGuestsOpen} />}</Suspense>
       <AlertDialog open={participantToDelete !== null} onOpenChange={(open) => !open && setParticipantToDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>

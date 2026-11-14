@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { lazy, Suspense, useEffect } from 'react'
 import { SWRConfig } from 'swr'
 import { AuthProvider } from '@/components/auth-provider'
 import { AppSidebar } from '@/components/app-sidebar'
@@ -18,6 +18,9 @@ import { StudentsPage } from '@/pages/students-page'
 import { ActivitiesPage } from '@/pages/activities-page'
 import { AuditPage } from '@/pages/audit-page'
 import { UsernameSetupPage } from '@/pages/username-setup-page'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Button } from '@/components/ui/button'
+const MesasPage = lazy(() => import('@/pages/mesas-page').then((module) => ({ default: module.MesasPage })))
 
 const PAGE_TITLES = {
   dashboard: 'Dashboard Principal',
@@ -27,6 +30,7 @@ const PAGE_TITLES = {
   activities: 'Actividades de Recaudacion',
   settings: 'Configuracion',
   audit: 'Auditoria',
+  mesas: 'Mesas e invitados',
 } as const
 
 const swrViewConfig = {
@@ -47,11 +51,16 @@ function MainContent() {
   return (
     <SidebarProvider>
       <AppSidebar />
-      <SidebarInset>
+      <SidebarInset className="min-w-0">
         <SiteHeader title={PAGE_TITLES[currentPage]} />
         {currentPage === 'dashboard' && <DashboardPage />}
         {currentPage === 'students' && <StudentsPage />}
         {currentPage === 'payments' && <PaymentsPage />}
+        {currentPage === 'mesas' && (
+          <Suspense fallback={<Skeleton className="m-6 h-[70vh]" />}>
+            <MesasPage />
+          </Suspense>
+        )}
         {currentPage === 'expenses' && <ExpensesPage />}
         {currentPage === 'activities' && <ActivitiesPage />}
         {currentPage === 'settings' && <SettingsPage />}
@@ -70,7 +79,7 @@ function App() {
 }
 
 function AppContent() {
-  const { session, profile, isInitializing, isProfileLoading } = useAuth()
+  const { session, profile, isInitializing, isProfileLoading, profileError, refreshProfile } = useAuth()
 
   if (isInitializing) {
     return (
@@ -100,6 +109,12 @@ function AppContent() {
                   Preparando perfil...
                 </p>
               </div>
+            </div>
+          ) : profileError && !profile ? (
+            <div className="flex min-h-screen flex-col items-center justify-center gap-3 p-6" role="alert">
+              <p className="font-medium">No se pudo cargar tu perfil</p>
+              <p className="text-sm text-muted-foreground">{profileError.message}</p>
+              <Button onClick={() => { void refreshProfile() }}>Volver a intentar</Button>
             </div>
           ) : !profile?.username ? (
             <UsernameSetupPage />

@@ -1,3 +1,5 @@
+import type { Mesa, MesaResumen, MesaAsiento, MesaCesion, MesaAbono, MesaInvitado, MesaCuenta, SalonObjeto, MesaTable } from './mesas.types'
+
 export type Json =
   | string
   | number
@@ -14,6 +16,14 @@ export type Database = {
   }
   public: {
     Tables: {
+      mesas: MesaTable<Mesa>
+      mesa_cesiones: MesaTable<MesaCesion>
+      mesa_abonos: MesaTable<MesaAbono>
+      mesa_asientos: MesaTable<MesaAsiento>
+      mesa_invitados: MesaTable<MesaInvitado>
+      mesa_invitados_versiones: MesaTable<{ perfil_id: string; version: number }>
+      mesa_cuentas_sistema: MesaTable<MesaCuenta>
+      salon_objetos: MesaTable<SalonObjeto>
       abonos_egresos: {
         Row: {
           created_at: string
@@ -628,9 +638,39 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      mesas_resumen: { Row: MesaResumen; Relationships: [] }
     }
     Functions: {
+      preparar_mesas_evento: { Args: never; Returns: undefined }
+      actualizar_mesa_evento: {
+        Args: { p_perfil_id: string; p_version: number; p_extras: number; p_notas: string }
+        Returns: undefined
+      }
+      ceder_cupos_mesa: {
+        Args: { p_id: string; p_origen: string; p_destino: string; p_cantidad: number }
+        Returns: undefined
+      }
+      registrar_abono_mesa: {
+        Args: { p_id: string; p_perfil_id: string; p_monto: number; p_metodo: string; p_referencia: string }
+        Returns: undefined
+      }
+      registrar_abono_mesa_con_comprobante: {
+        Args: { p_id: string; p_perfil_id: string; p_monto: number; p_metodo: string; p_referencia: string; p_voucher_path?: string | null; p_voucher_filename?: string | null; p_voucher_mime_type?: string | null; p_voucher_size?: number | null }
+        Returns: undefined
+      }
+      anular_registro_mesa: { Args: { p_tipo: string; p_id: string }; Returns: undefined }
+      asignar_familia_mesa: { Args: { p_objeto: string; p_version: number; p_perfil_id: string | null }; Returns: undefined }
+      guardar_invitados_mesa: { Args: { p_perfil_id: string; p_version: number; p_invitados: Json }; Returns: undefined }
+      restaurar_distribucion_salon: { Args: Record<PropertyKey, never>; Returns: undefined }
+      asignar_invitado_asiento_mesa: { Args: { p_objeto: string; p_posicion: number; p_perfil_id: string; p_invitado_posicion: number; p_version: number }; Returns: undefined }
+      guardar_objeto_salon: {
+        Args: { p_id: string; p_version: number; p_x: number; p_y: number; p_nombre: string; p_ancho: number; p_alto: number }
+        Returns: undefined
+      }
+      asignar_asiento_mesa: {
+        Args: { p_objeto: string; p_posicion: number; p_perfil_id: string | null; p_version: number }
+        Returns: undefined
+      }
       actualizar_abono_manual: {
         Args: { p_movement_id: string; p_monto: number; p_nota: string }
         Returns: undefined

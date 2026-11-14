@@ -9,6 +9,7 @@ const InscriptionVoucherDialog = lazy(() => import('./inscription-voucher-dialog
 import { getRoleColor } from '@/features/students/utils/get-role-color'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
+import { formatMoney, getParticipantTotals } from '../utils/participant-totals'
 
 import {
   Table,
@@ -149,6 +150,7 @@ export function PaymentsMatrix() {
           }
         }
         
+        if (Number(data.mesasMap[perfil.id]?.saldo_extras ?? 0) > 0) isClean = false
         return statusFilter === 'aldia' ? isClean : !isClean
       })
     }
@@ -257,6 +259,10 @@ export function PaymentsMatrix() {
                 <TableHead className="sticky left-0 top-0 z-30 min-w-[200px] w-[200px] border-r border-border/40 bg-secondary shadow-[2px_0_5px_rgba(0,0,0,0.02)]">
                   <span className="font-semibold text-xs text-muted-foreground uppercase tracking-wider">Alumno</span>
                 </TableHead>
+                <TableHead className="min-w-[148px] border-r px-3">
+                  <span className="text-xs font-semibold">Total por persona</span>
+                  <span className="block text-[10px] text-muted-foreground">Promoción + extras</span>
+                </TableHead>
                 
                 {/* Calendario Fijo 12 Meses (Densidad compacta) */}
                 {MESES_DEL_ANO.map((mes) => {
@@ -294,7 +300,7 @@ export function PaymentsMatrix() {
             <TableBody>
               {paginatedList.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={13} className="h-32 text-center text-muted-foreground">
+                  <TableCell colSpan={14} className="h-32 text-center text-muted-foreground">
                     No se encontraron participantes que coincidan con la búsqueda.
                   </TableCell>
                 </TableRow>
@@ -330,6 +336,10 @@ export function PaymentsMatrix() {
                         )}
                       </div>
                     </div>
+                  </TableCell>
+
+                  <TableCell className="border-r px-3 py-2">
+                    <ParticipantTotal data={data} profileId={perfil.id} />
                   </TableCell>
 
                   {/* React.memo Rendering de Celdas Fijas */}
@@ -401,6 +411,14 @@ export function PaymentsMatrix() {
                     <span className="font-semibold text-xs text-foreground">Supervisión Mensual</span>
                     <span className="text-[9px] text-muted-foreground">Progreso de Recaudación</span>
                   </div>
+                </TableCell>
+                <TableCell className="border-r px-3 py-2">
+                  <div className="text-xs font-semibold tabular-nums">
+                    {formatMoney(perfilesInscritos.filter((p) => p.activo).reduce(
+                      (sum, p) => sum + getParticipantTotals(data, p.id).totalPaid, 0
+                    ))}
+                  </div>
+                  <div className="text-[10px] text-muted-foreground">Acumulado de participantes activos</div>
                 </TableCell>
                 
                 {MESES_DEL_ANO.map((mes) => {
@@ -506,6 +524,23 @@ export function PaymentsMatrix() {
           />
         </Suspense>
       </div>
+    </div>
+  )
+}
+
+function ParticipantTotal({ data, profileId }: {
+  data: NonNullable<ReturnType<typeof usePaymentsMatrix>['data']>
+  profileId: string
+}) {
+  const totals = getParticipantTotals(data, profileId)
+  return (
+    <div className="flex flex-col gap-0.5 tabular-nums" title={
+      `Promoción: ${formatMoney(totals.promotionPaid)} de ${formatMoney(totals.promotionExpected)}. Extras: ${formatMoney(totals.extrasPaid)} de ${formatMoney(totals.extrasExpected)}.`
+    }>
+      <span className="text-xs font-semibold">{formatMoney(totals.totalPaid)}</span>
+      <span className="text-[10px] text-muted-foreground">
+        Falta {formatMoney(totals.totalDebt)}
+      </span>
     </div>
   )
 }

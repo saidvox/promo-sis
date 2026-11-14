@@ -26,3 +26,8 @@ dist-ssr
 *.sln
 *.sw?
 .vercel
+
+# Local tooling and visual checks
+/supabase/.temp/
+/.playwright-cli/
+/output/playwright/

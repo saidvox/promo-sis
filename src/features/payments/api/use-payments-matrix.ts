@@ -1,6 +1,7 @@
 import useSWR from 'swr'
 import { supabase } from '@/lib/supabase/client'
 import type { Database } from '@/types/database.types'
+import type { MesaResumen } from '@/types/mesas.types'
 
 type PerfilRow = Pick<Database['public']['Tables']['perfiles']['Row'], 'id' | 'nombre_completo' | 'dni' | 'rol' | 'codigo_u' | 'activo'>
 type CuotaRow = Pick<Database['public']['Tables']['config_cuotas']['Row'], 'id' | 'mes_nombre' | 'monto' | 'fecha_vencimiento'>
@@ -31,6 +32,7 @@ export type MatrixData = {
   // js-index-maps: Mapa de inscripciones (perfilId -> monto) para tratar Enero como Inscripción
   inscripcionesMap: Record<string, number>
   inscripcionesDetailMap: Record<string, InscripcionLiteRow>
+  mesasMap: Record<string, MesaResumen>
 }
 
 function buildQuotasMap(quotas: CuotaRow[]) {
@@ -82,7 +84,7 @@ function buildEnrollmentMaps(enrollments: InscripcionLiteRow[]) {
  */
 export const usePaymentsMatrix = () => {
   const fetcher = async (): Promise<MatrixData> => {
-    const [perfilesResult, inscripcionesResult, cuotasResult, pagosResult, movementsResult] = await Promise.all([
+    const [perfilesResult, inscripcionesResult, cuotasResult, pagosResult, movementsResult, mesasResult] = await Promise.all([
       supabase
         .from('perfiles')
         .select('id, nombre_completo, dni, rol, codigo_u, activo')
@@ -105,7 +107,8 @@ export const usePaymentsMatrix = () => {
       supabase
         .from('pago_movimientos')
         .select('*, actividades(nombre)')
-        .order('created_at', { ascending: true })
+        .order('created_at', { ascending: true }),
+      supabase.from('mesas_resumen').select('*'),
     ])
 
     if (perfilesResult.error) throw perfilesResult.error
@@ -113,6 +116,7 @@ export const usePaymentsMatrix = () => {
     if (cuotasResult.error) throw cuotasResult.error
     if (pagosResult.error) throw pagosResult.error
     if (movementsResult.error) throw movementsResult.error
+    if (mesasResult.error) throw mesasResult.error
 
     // Incluye participantes pendientes de inscripción para que puedan registrar su pago.
     const perfilesInscritos = perfilesResult.data as PerfilRow[]
@@ -128,7 +132,8 @@ export const usePaymentsMatrix = () => {
     const { enrollmentAmounts: inscripcionesMap, enrollmentDetails: inscripcionesDetailMap } =
       buildEnrollmentMaps(inscripciones)
 
-    return { perfilesInscritos, cuotasPorMes, pagosMap, paymentMovementsMap, inscripcionesMap, inscripcionesDetailMap }
+    const mesasMap = Object.fromEntries((mesasResult.data ?? []).map((mesa) => [mesa.perfil_id, mesa]))
+    return { perfilesInscritos, cuotasPorMes, pagosMap, paymentMovementsMap, inscripcionesMap, inscripcionesDetailMap, mesasMap }
   }
 
   const { data, error, isLoading, mutate } = useSWR<MatrixData, Error>(

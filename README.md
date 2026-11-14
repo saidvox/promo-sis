@@ -26,3 +26,11 @@ La app falla al iniciar si las variables de Supabase no existen, para evitar con
 ## Navegacion
 
 La navegacion interna usa `hash` en la URL, por ejemplo `#/payments` o `#/expenses`, para conservar la vista actual al recargar la pagina.
+
+## Mesas e invitados
+
+- Cada familia incluye ocho asientos; los extras cuestan S/40 y se ubican en mesas compartidas.
+- Las familias se asignan a mesas numeradas. En celular se usan las listas de asignación y saldos; el plano editable está disponible en escritorio.
+- La lista de invitados exige nombres y apellidos en cada fila utilizada. Los comprobantes de pago se guardan en Storage privado.
+- `mesa_cuentas_sistema` relaciona las cuentas de acceso con sus fichas de participante. Sus elecciones solo pueden cambiarlas el titular o el owner.
+- Los vínculos de cuentas de solo acceso y la marca `es_owner` se configuran desde el servidor; los clientes autenticados no tienen permiso para modificarlos. Al incorporar una nueva cuenta, revisar este vínculo sin duplicar su ficha financiera.

@@ -6,9 +6,11 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from "@/components/ui/sidebar"
 
 import { useNavigation, type PageView } from "@/hooks/use-navigation"
+import { Badge } from "@/components/ui/badge"
 
 export function NavMain({
   items,
@@ -21,6 +23,7 @@ export function NavMain({
   }[]
 }) {
   const { currentPage, navigate } = useNavigation()
+  const { isMobile, setOpenMobile } = useSidebar()
 
   return (
     <SidebarGroup>
@@ -31,7 +34,7 @@ export function NavMain({
               <SidebarMenuButton 
                 tooltip={item.title}
                 isActive={currentPage === item.url}
-                onClick={() => navigate(item.url as PageView)}
+                onClick={() => { navigate(item.url as PageView); if (isMobile) setOpenMobile(false) }}
                 aria-current={currentPage === item.url ? "page" : undefined}
                 className="flex items-center justify-between"
               >
@@ -40,9 +43,7 @@ export function NavMain({
                   <span>{item.title}</span>
                 </div>
                 {item.badge && (
-                  <span className="ml-auto flex h-5 w-fit items-center justify-center rounded-full bg-primary/10 px-1.5 text-[10px] font-bold text-primary ring-1 ring-inset ring-primary/20">
-                    {item.badge}
-                  </span>
+                  <Badge variant="secondary" className="ml-auto text-[10px]">{item.badge}</Badge>
                 )}
               </SidebarMenuButton>
             </SidebarMenuItem>

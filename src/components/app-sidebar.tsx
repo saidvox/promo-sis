@@ -14,7 +14,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
-import { LayoutDashboardIcon, UsersIcon, BanknoteIcon, TrendingDownIcon, SparklesIcon, Settings2Icon, CommandIcon } from "lucide-react"
+import { LayoutDashboardIcon, UsersIcon, BanknoteIcon, TrendingDownIcon, SparklesIcon, Settings2Icon, CommandIcon, ArmchairIcon } from "lucide-react"
 
 const data = {
 
@@ -33,6 +33,12 @@ const data = {
       title: "Pagos",
       url: "payments",
       icon: <BanknoteIcon />,
+    },
+    {
+      title: "Mesas",
+      url: "mesas",
+      icon: <ArmchairIcon />,
+      badge: "Nuevo",
     },
     {
       title: "Egresos",

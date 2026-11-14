@@ -24,6 +24,9 @@
   --border: 240 5.9% 90%;
   --input: 240 5.9% 90%;
   --ring: 240 10% 3.9%;
+  --event-paid: 158 65% 30%;
+  --event-extra: 35 85% 35%;
+  --event-transfer: 202 75% 37%;
   --radius: 0.75rem;
 
   --sidebar: 0 0% 98%;
@@ -67,6 +70,9 @@
   --color-border: hsl(var(--border));
   --color-input: hsl(var(--input));
   --color-ring: hsl(var(--ring));
+  --color-event-paid: hsl(var(--event-paid));
+  --color-event-extra: hsl(var(--event-extra));
+  --color-event-transfer: hsl(var(--event-transfer));
   
   --color-sidebar: hsl(var(--sidebar));
   --color-sidebar-foreground: hsl(var(--sidebar-foreground));
@@ -106,6 +112,9 @@
   --border: 240 3.7% 15.9%;
   --input: 240 3.7% 15.9%;
   --ring: 240 4.9% 83.9%;
+  --event-paid: 158 62% 60%;
+  --event-extra: 38 90% 65%;
+  --event-transfer: 200 80% 65%;
 
   --sidebar: 240 5.9% 10%;
   --sidebar-foreground: 240 4.8% 95.9%;
@@ -121,7 +130,7 @@
   * {
     @apply border-border outline-ring/50;}
   body {
-    @apply bg-background text-foreground font-sans antialiased;}
+    @apply relative bg-background text-foreground font-sans antialiased;}
   html {
     @apply font-sans;}}
 
