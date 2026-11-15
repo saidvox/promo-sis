@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react'
-import { ExpandIcon, FocusIcon, HandIcon, MinusIcon, MoveIcon, PlusIcon, RotateCcwIcon, ShrinkIcon } from 'lucide-react'
+import { ExpandIcon, FocusIcon, HandIcon, MinusIcon, PlusIcon, RotateCcwIcon, ShrinkIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import type { MesaAsiento, MesaInvitado, SalonObjeto } from '@/types/mesas.types'
@@ -8,8 +8,7 @@ import { familyColor, seatPoint } from '../utils/salon-geometry'
 import type { SalonViewport as Viewport, SalonFocus } from '../utils/salon-geometry'
 import { useMesaPermissions } from '../utils/mesa-permissions'
 type Gesture = {
-  x: number; y: number; viewport: Viewport; object?: SalonObjeto; selectionId?: string; moved: boolean
-  mode: 'pan' | 'move' | 'select'
+  x: number; y: number; viewport: Viewport; selectionId?: string; moved: boolean
 }
 
 type Props = {
@@ -19,7 +18,6 @@ type Props = {
   profiles: MatrixData['perfilesInscritos']
   selectedId: string | null
   onSelect: (id: string | null) => void
-  onSave: (object: SalonObjeto) => Promise<void>
   focus: SalonFocus | null
   onFocused: () => void
   viewport: Viewport
@@ -30,26 +28,20 @@ type Props = {
   onRestore: () => Promise<boolean>
 }
 
-export function SalonCanvas({ objects, seats, guests, profiles, selectedId, onSelect, onSave, focus, onFocused, viewport, setViewport, expanded, onFullscreen, busy, onRestore }: Props) {
+export function SalonCanvas({ objects, seats, guests, profiles, selectedId, onSelect, focus, onFocused, viewport, setViewport, expanded, onFullscreen, busy, onRestore }: Props) {
   const svgRef = useRef<SVGSVGElement>(null)
-  const { canManage, isOwner } = useMesaPermissions()
+  const { isOwner } = useMesaPermissions()
   const gesture = useRef<Gesture | null>(null)
   const didFit = useRef(viewport.x !== 20 || viewport.y !== 20 || viewport.scale !== 0.2)
   const handledFocus = useRef<number | null>(null)
   const viewportRef = useRef(viewport)
   const animation = useRef<number | null>(null)
-  const spaceHeld = useRef(false)
-  const pointerInside = useRef(false)
-  const draftRef = useRef<SalonObjeto | null>(null)
-  const [spacePressed, setSpacePressed] = useState(false)
-  const [dragMode, setDragMode] = useState<'pan' | 'move' | null>(null)
-  const [draft, setDraft] = useState<SalonObjeto | null>(null)
-  const [saving, setSaving] = useState(false)
+  const [panning, setPanning] = useState(false)
   const profileMap = new Map(profiles.map((profile) => [profile.id, profile]))
   const seatMap = new Map(seats.map((seat) => [`${seat.objeto_id}-${seat.posicion}`, seat]))
   const guestMap = new Map(guests.map((guest) => [`${guest.perfil_id}-${guest.posicion}`, guest]))
-  const canMove = (object?: SalonObjeto) => !object || (canManage(object.perfil_id)
-    && (object.tipo !== 'mesa_extras' || seats.filter((seat) => seat.objeto_id === object.id).every((seat) => canManage(seat.perfil_id))))
+  const width = Math.max(3450, ...objects.map((object) => object.x + object.ancho + 100))
+  const height = Math.max(900, ...objects.map((object) => object.y + object.alto + 100))
 
   useEffect(() => { viewportRef.current = viewport }, [viewport])
   useEffect(() => () => {
@@ -57,35 +49,14 @@ export function SalonCanvas({ objects, seats, guests, profiles, selectedId, onSe
   }, [])
 
   useEffect(() => {
-    const releaseSpace = () => {
-      spaceHeld.current = false
-      setSpacePressed(false)
-    }
-    const keydown = (event: KeyboardEvent) => {
-      if (event.code !== 'Space' || event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey) return
-      const target = event.target instanceof Element ? event.target : null
-      // Keep typing, native button activation and modal shortcuts independent of the canvas.
-      if (target?.closest('input, textarea, select, button, [role="textbox"], [role="combobox"], [role="dialog"], [role="alertdialog"], [contenteditable]:not([contenteditable="false"])')) return
-      if (!pointerInside.current && !svgRef.current?.contains(target)) return
-      event.preventDefault()
-      if (!spaceHeld.current) { spaceHeld.current = true; setSpacePressed(true) }
-    }
-    const keyup = (event: KeyboardEvent) => { if (event.code === 'Space') releaseSpace() }
     const reset = () => {
-      releaseSpace()
       gesture.current = null
-      draftRef.current = null
-      setDraft(null)
-      setDragMode(null)
+      setPanning(false)
     }
     const visibilityChanged = () => { if (document.hidden) reset() }
-    window.addEventListener('keydown', keydown)
-    window.addEventListener('keyup', keyup)
     window.addEventListener('blur', reset)
     document.addEventListener('visibilitychange', visibilityChanged)
     return () => {
-      window.removeEventListener('keydown', keydown)
-      window.removeEventListener('keyup', keyup)
       window.removeEventListener('blur', reset)
       document.removeEventListener('visibilitychange', visibilityChanged)
     }
@@ -117,11 +88,18 @@ export function SalonCanvas({ objects, seats, guests, profiles, selectedId, onSe
   const fit = useCallback(() => {
     const rect = svgRef.current?.getBoundingClientRect()
     if (!rect) return
-    const width = Math.max(3450, ...objects.map((object) => object.x + object.ancho + 100))
-    const height = Math.max(3350, ...objects.map((object) => object.y + object.alto + 100))
     const scale = Math.max(0.05, Math.min((rect.width - 48) / width, (rect.height - 48) / height, 1))
     animateTo({ x: (rect.width - width * scale) / 2, y: (rect.height - height * scale) / 2, scale })
-  }, [objects, animateTo])
+  }, [width, height, animateTo])
+
+  const previousBounds = useRef({width,height})
+  useEffect(() => {
+    if(previousBounds.current.width === width && previousBounds.current.height === height) return
+    previousBounds.current = {width,height}
+    if(focus || gesture.current) return
+    const frame = requestAnimationFrame(fit)
+    return () => cancelAnimationFrame(frame)
+  }, [width,height,fit,focus])
 
   useEffect(() => {
     const node = svgRef.current
@@ -176,16 +154,11 @@ export function SalonCanvas({ objects, seats, guests, profiles, selectedId, onSe
     return () => clearTimeout(timer)
   }, [focus, objects, animateTo, onFocused])
 
-  const finishGesture = async (cancel = false) => {
+  const finishGesture = (cancel = false) => {
     const current = gesture.current
-    const movedObject = draftRef.current
     gesture.current = null
-    draftRef.current = null
-    setDragMode(null)
+    setPanning(false)
     if (current && !current.moved && current.selectionId && !cancel) onSelect(current.selectionId)
-    if (!current?.object || !current.moved || !movedObject || cancel) { setDraft(null); return }
-    setSaving(true)
-    try { await onSave(movedObject) } finally { setSaving(false); setDraft(null) }
   }
 
   return (
@@ -193,13 +166,12 @@ export function SalonCanvas({ objects, seats, guests, profiles, selectedId, onSe
       <div className="flex flex-wrap items-center justify-between gap-2 border-b px-3 py-2">
         <div className="flex items-center gap-2">
           <span className="flex items-center gap-2 text-xs font-medium" role="status">
-            {spacePressed || dragMode === 'pan' ? <HandIcon className="size-4" /> : <MoveIcon className="size-4" />}
-            {saving ? 'Guardando posición…' : spacePressed || dragMode === 'pan' ? 'Recorrer plano' : 'Mover mesas'}
+            <HandIcon className="size-4" />Recorrer plano
           </span>
-          <span className="hidden text-xs text-muted-foreground sm:inline">Mantén <kbd className="rounded border bg-muted px-1.5 py-0.5 font-sans text-[10px]">Espacio</kbd> para recorrer</span>
+          <span className="hidden text-xs text-muted-foreground sm:inline">Mesas fijas · Distribución automática</span>
         </div>
         <div className="flex items-center gap-1">
-          {isOwner && <Button variant="outline" size="sm" disabled={busy || saving} onClick={async () => { if (await onRestore()) fit() }} aria-label="Restaurar distribución simétrica"><RotateCcwIcon data-icon="inline-start" />Restaurar distribución</Button>}
+          {isOwner && <Button variant="outline" size="sm" disabled={busy} onClick={async () => { if (await onRestore()) fit() }} aria-label="Restaurar distribución simétrica"><RotateCcwIcon data-icon="inline-start" />Restaurar distribución</Button>}
           <Button variant="ghost" size="icon-sm" onClick={() => zoom(0.8)} aria-label="Alejar"><MinusIcon /></Button>
           <span className="w-12 text-center text-xs tabular-nums">{Math.round(viewport.scale * 100)}%</span>
           <Button variant="ghost" size="icon-sm" onClick={() => zoom(1.25)} aria-label="Acercar"><PlusIcon /></Button>
@@ -209,13 +181,12 @@ export function SalonCanvas({ objects, seats, guests, profiles, selectedId, onSe
       </div>
       <svg
         ref={svgRef} className={cn('salon-canvas min-h-0 w-full flex-1 touch-none select-none outline-none',
-          dragMode === 'pan' ? 'cursor-grabbing' : dragMode === 'move' ? 'cursor-move' : spacePressed ? 'cursor-grab' : 'cursor-default')}
-        role="application" aria-label="Plano del salón. Arrastra las mesas para moverlas. Mantén Espacio y arrastra para recorrer. Usa la rueda para acercar y haz clic en una mesa para ver sus datos."
+          panning ? 'cursor-grabbing' : 'cursor-grab')}
+        role="application" aria-label="Plano del salón con mesas fijas. Arrastra para recorrer, usa la rueda para acercar y haz clic en una mesa para ver sus datos."
         tabIndex={0}
-        onPointerEnter={() => { pointerInside.current = true }}
-        onPointerLeave={() => { pointerInside.current = false }}
         onDragStart={(event) => event.preventDefault()}
         onKeyDown={(event) => {
+          if (event.code === 'Space') { event.preventDefault(); return }
           const pan: Record<string, [number, number]> = { ArrowLeft: [50, 0], ArrowRight: [-50, 0], ArrowUp: [0, 50], ArrowDown: [0, -50] }
           if (pan[event.key]) {
             event.preventDefault()
@@ -226,18 +197,14 @@ export function SalonCanvas({ objects, seats, guests, profiles, selectedId, onSe
           else if (event.key === '0') fit()
         }}
         onPointerDown={(event) => {
-          if (saving || busy || event.button !== 0) return
+          if (busy || event.button !== 0) return
           event.preventDefault()
           svgRef.current?.focus({ preventScroll: true })
           const id = (event.target as Element).closest('[data-object]')?.getAttribute('data-object')
-          const object = objects.find((item) => item.id === id)
-          const panning = spaceHeld.current || (event.pointerType === 'touch' && !object)
-          if (!panning && !object) return
           if (animation.current !== null) cancelAnimationFrame(animation.current)
           svgRef.current?.setPointerCapture(event.pointerId)
-          const mode = panning ? 'pan' : canMove(object) ? 'move' : 'select'
-          setDragMode(mode === 'select' ? null : mode)
-          gesture.current = { x: event.clientX, y: event.clientY, viewport, mode, object: mode === 'move' ? object : undefined, selectionId: panning ? undefined : id ?? undefined, moved: false }
+          setPanning(true)
+          gesture.current = { x: event.clientX, y: event.clientY, viewport, selectionId: id ?? undefined, moved: false }
         }}
         onPointerMove={(event) => {
           const current = gesture.current
@@ -246,14 +213,7 @@ export function SalonCanvas({ objects, seats, guests, profiles, selectedId, onSe
           const dy = event.clientY - current.y
           if (Math.abs(dx) + Math.abs(dy) > 4) current.moved = true
           if (!current.moved) return
-          if (current.object) {
-            const movedObject = { ...current.object,
-              x: Math.max(0, Math.min(5000, current.object.x + dx / current.viewport.scale)),
-              y: Math.max(0, Math.min(5000, current.object.y + dy / current.viewport.scale)),
-            }
-            draftRef.current = movedObject
-            setDraft(movedObject)
-          } else if (current.mode === 'pan') setViewport({ ...current.viewport, x: current.viewport.x + dx, y: current.viewport.y + dy })
+          setViewport({ ...current.viewport, x: current.viewport.x + dx, y: current.viewport.y + dy })
         }}
         onPointerUp={() => { void finishGesture() }}
         onPointerCancel={() => { void finishGesture(true) }}
@@ -266,21 +226,21 @@ export function SalonCanvas({ objects, seats, guests, profiles, selectedId, onSe
         </defs>
         <rect width="100%" height="100%" fill="url(#salon-grid)" />
         <g transform={`translate(${viewport.x} ${viewport.y}) scale(${viewport.scale})`}>
-          <rect x="20" y="20" width="3380" height="3310" rx="24" className="fill-none stroke-border" strokeWidth="3" />
+          <rect x="20" y="20" width={width - 70} height={height - 70} rx="24" className="fill-none stroke-border" strokeWidth="3" />
           {objects.map((savedObject) => {
-            const object = draft?.id === savedObject.id ? draft : savedObject
+            const object = savedObject
             const profile = object.perfil_id ? profileMap.get(object.perfil_id) : undefined
             const color = profile ? familyColor(profile.rol) : undefined
             const selected = selectedId === object.id
             const shared = object.tipo === 'mesa_extras'
             if (object.tipo === 'zona') return (
-              <g key={object.id} data-object={object.id} transform={`translate(${object.x} ${object.y})`} style={{ cursor: spacePressed || dragMode !== null ? 'inherit' : 'move' }}>
+              <g key={object.id} data-object={object.id} transform={`translate(${object.x} ${object.y})`} className="cursor-inherit">
                 <rect width={object.ancho} height={object.alto} rx="12" className={cn('fill-muted/70 stroke-border', selected && 'stroke-primary')} strokeWidth={selected ? 4 : 2} />
                 <text x={object.ancho / 2} y={object.alto / 2} textAnchor="middle" dominantBaseline="middle" className="fill-muted-foreground text-[22px] font-medium tracking-wider">{object.nombre}</text>
               </g>
             )
             return (
-              <g key={object.id} data-object={object.id} transform={`translate(${object.x} ${object.y}) scale(${object.ancho / 180} ${object.alto / 180})`} style={{ cursor: spacePressed || dragMode !== null ? 'inherit' : canMove(object) ? 'move' : 'pointer' }}>
+              <g key={object.id} data-object={object.id} transform={`translate(${object.x} ${object.y}) scale(${object.ancho / 180} ${object.alto / 180})`} style={{cursor:'inherit'}}>
                 <circle cx="90" cy="90" r="64" className={cn(shared ? 'fill-event-transfer/10 stroke-event-transfer/70' : 'fill-card stroke-border', selected && 'stroke-primary')} strokeWidth={selected ? 4 : 2} strokeDasharray={shared ? '6 4' : undefined} />
                 {object.tipo === 'mesa_familiar' && <circle cx="90" cy="90" r="57" fill={color} opacity="0.1" />}
                 {shared && <g><rect x="54" y="39" width="72" height="15" rx="7.5" className="fill-event-transfer/20" /><text x="90" y="49.5" textAnchor="middle" className="fill-event-transfer text-[7px] font-semibold tracking-wider">COMPARTIDA</text></g>}
@@ -317,7 +277,7 @@ export function SalonCanvas({ objects, seats, guests, profiles, selectedId, onSe
         </g>
       </svg>
       <div className="flex flex-wrap items-center justify-between gap-2 border-t px-3 py-2 text-[11px] text-muted-foreground">
-        <span>Arrastra mesas para ordenar · Espacio + arrastrar para recorrer · Rueda para zoom</span>
+        <span>Arrastra para recorrer · Rueda para zoom · Las mesas no se mueven</span>
         <span>Distribución ilustrativa · Posiciones guardadas en el sistema</span>
       </div>
     </div>

@@ -22,7 +22,7 @@ export function MesaAssignmentControl({ object, objects, profiles, busy, onActio
   return <div className="flex flex-col gap-3">
     <Field>
       <FieldLabel>Graduado y familia</FieldLabel>
-      <ParticipantPicker profiles={profiles.filter((profile) => profile.activo)} value={chosen} onSelect={setChosen} details={details} disabledIds={profiles.filter((profile) => !canManage(profile.id)).map((profile) => profile.id)} label={'Elegir familia para ' + object.nombre} className="sm:w-full" disabled={busy || locked} />
+      <ParticipantPicker profiles={profiles.filter((profile) => profile.activo && profile.inscrito)} value={chosen} onSelect={setChosen} details={details} disabledIds={profiles.filter((profile) => !canManage(profile.id)).map((profile) => profile.id)} label={'Elegir familia para ' + object.nombre} className="sm:w-full" disabled={busy || locked} />
     </Field>
     {changed && chosen && <p className="flex gap-2 text-xs text-muted-foreground"><ArrowRightLeftIcon className="mt-0.5 size-3.5 shrink-0" />{otherTable
       ? current ? `Se intercambiarán las familias de ${object.nombre} y ${otherTable.nombre}.` : `La familia pasará de ${otherTable.nombre} a ${object.nombre}; su mesa anterior quedará libre.`

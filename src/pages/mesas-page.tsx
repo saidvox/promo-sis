@@ -21,13 +21,14 @@ import { MesaDetailDrawer } from '@/features/mesas/components/mesa-detail-drawer
 import { MesasParticipantsTable } from '@/features/mesas/components/mesas-participants-table'
 import { MesasAssignmentBoard } from '@/features/mesas/components/mesas-assignment-board'
 import { sortParticipants } from '@/features/mesas/utils/participant-order'
+import { activeSalonLayout } from '@/features/mesas/utils/active-salon-layout'
 import type { MesaAction } from '@/features/mesas/components/mesa-family-panel'
 import type { SalonViewport, SalonFocus } from '@/features/mesas/utils/salon-geometry'
 import type { SalonObjeto } from '@/types/mesas.types'
 
 export function MesasPage() {
   const { data, error, isLoading, mutate } = useMesas()
-  const { data: matrix, error: matrixError } = usePaymentsMatrix()
+  const { data: matrix, error: matrixError } = usePaymentsMatrix(60_000)
   if (error || matrixError) return <div className="flex flex-col items-start gap-3 p-6" role="alert">
     <h1 className="text-lg font-semibold">No se pudo cargar Mesas</h1>
     <p className="text-sm text-muted-foreground">{error?.message ?? matrixError?.message}</p>
@@ -56,9 +57,9 @@ function MesasWorkspace({ data, matrix, onRefresh }: {
   const [showInactive, setShowInactive] = useState(false)
   const profiles = useMemo(() => sortParticipants(matrix.perfilesInscritos.filter((profile) => showInactive || profile.activo)), [matrix.perfilesInscritos, showInactive])
   const visibleObjects = useMemo(() => {
-    const ids = new Set(profiles.map((profile) => profile.id))
-    return data.objetos.filter((object) => !object.perfil_id || ids.has(object.perfil_id))
-  }, [data.objetos, profiles])
+    const ids = new Set(matrix.perfilesInscritos.filter(profile => profile.activo && profile.inscrito).map(profile => profile.id))
+    return activeSalonLayout(data.objetos, ids, data.asientos)
+  }, [data.objetos, data.asientos, matrix.perfilesInscritos])
 
   useEffect(() => {
     if (!fullscreen) return
@@ -114,13 +115,13 @@ function MesasWorkspace({ data, matrix, onRefresh }: {
 
   const locateProfile = (profileId: string) => {
     const object = data.objetos.find((item) => item.perfil_id === profileId)
-    if (!object) { setView('asignacion'); toast.info('Elige una mesa libre y asigna a este participante.'); return }
+    if (!object || !visibleObjects.some(item => item.id === object.id)) { setView('asignacion'); toast.info('Para aparecer en el plano, el participante debe estar activo e inscrito.'); return }
     locateObject(object.id)
   }
 
   const openProfile = (profileId: string) => {
     const object = data.objetos.find((item) => item.perfil_id === profileId)
-    if (view === 'plano' && object) { locateObject(object.id); return }
+    if (view === 'plano' && object && visibleObjects.some(item => item.id === object.id)) { locateObject(object.id); return }
     setSelectedId(object?.id ?? null)
     setSelectedProfileId(object ? null : profileId)
     setDrawerOpen(true)
@@ -131,12 +132,12 @@ function MesasWorkspace({ data, matrix, onRefresh }: {
     id: 'profile-' + selectedProfile.id, perfil_id: selectedProfile.id, tipo: 'mesa_familiar' as const,
     nombre: 'Sin mesa asignada', x: 0, y: 0, ancho: 180, alto: 180, version: 0,
   } : undefined)
-  const activeIds = new Set(matrix.perfilesInscritos.filter((profile) => profile.activo).map((profile) => profile.id))
+  const activeIds = new Set(matrix.perfilesInscritos.filter((profile) => profile.activo && profile.inscrito).map((profile) => profile.id))
   const summaries = data.resumen.filter((mesa) => activeIds.has(mesa.perfil_id))
-  const extraTables = data.objetos.filter((object) => object.tipo === 'mesa_extras').length
+  const extraTables = visibleObjects.filter((object) => object.tipo === 'mesa_extras').length
   const extraGuests = summaries.reduce((sum, mesa) => sum + mesa.extras_usados, 0)
   const extraDebt = summaries.reduce((sum, mesa) => sum + Number(mesa.saldo_extras), 0)
-  const assignedFamilies = data.objetos.filter((object) => object.tipo === 'mesa_familiar' && object.perfil_id).length
+  const assignedFamilies = visibleObjects.filter((object) => object.tipo === 'mesa_familiar' && object.perfil_id).length
 
   const workspace = (
     <section data-mesas-fullscreen={fullscreen || undefined} className={cn(
@@ -146,7 +147,7 @@ function MesasWorkspace({ data, matrix, onRefresh }: {
       {!fullscreen && <header className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-col gap-1">
           <h1 className="text-xl font-semibold tracking-tight">Distribución de mesas</h1>
-          <p className="text-sm text-muted-foreground">8 personas por mesa · extras compartidos · S/40 por adicional</p>
+          <p className="text-sm text-muted-foreground">Solo activos e inscritos · 8 personas por mesa · S/40 por adicional</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Badge variant="secondary"><UsersIcon />{assignedFamilies} / {activeIds.size} familias ubicadas</Badge>
@@ -175,15 +176,15 @@ function MesasWorkspace({ data, matrix, onRefresh }: {
         <div className={cn('flex min-h-0 flex-col', fullscreen ? 'flex-1' : 'h-[calc(100dvh-230px)] min-h-[480px]')}>
           <SalonCanvas objects={visibleObjects} seats={data.asientos} guests={data.invitados} profiles={profiles} selectedId={selected?.id ?? null}
             onSelect={(id) => { setSelectedProfileId(null); setSelectedId(id); setDrawerOpen(Boolean(id)) }}
-            onSave={saveObject} focus={focus} onFocused={handleFocused}
+            focus={focus} onFocused={handleFocused}
             viewport={viewport} setViewport={setViewport} expanded={fullscreen}
             busy={busy} onRestore={() => onAction(() => supabase.rpc('restaurar_distribucion_salon'), 'Distribución simétrica restaurada')}
             onFullscreen={() => setFullscreen((value) => !value)} />
         </div>
       ) : view === 'asignacion' ? (
         <div className={cn('flex min-h-0 flex-col', fullscreen && 'flex-1 overflow-hidden p-3')}>
-          {mobile && <p className="mb-3 text-xs text-muted-foreground">Asigna las familias desde aquí. El plano para mover mesas está disponible en escritorio.</p>}
-          <MesasAssignmentBoard objects={data.objetos} profiles={profiles} busy={busy} onAction={onAction} onLocate={locateObject} mobile={mobile} />
+          {mobile && <p className="mb-3 text-xs text-muted-foreground">Asigna las familias desde aquí. El plano de consulta está disponible en escritorio.</p>}
+          <MesasAssignmentBoard objects={visibleObjects} profiles={profiles.filter(profile => profile.activo && profile.inscrito)} busy={busy} onAction={onAction} onLocate={locateObject} mobile={mobile} />
         </div>
       ) : (
         <div className={cn('flex min-h-0 flex-col gap-3', fullscreen ? 'flex-1 overflow-hidden p-3' : '')}>

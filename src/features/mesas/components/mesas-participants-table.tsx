@@ -29,7 +29,7 @@ export function MesasParticipantsTable({ profiles, matrix, summaries, onDetail, 
               <span className="size-2 shrink-0 rounded-full" style={{ background: familyColor(profile.rol) }} />
               <div className="flex flex-col items-start gap-1">
                 <Button variant="ghost" className="h-auto justify-start whitespace-normal p-0 text-left" onClick={() => onDetail(profile.id)}>{profile.nombre_completo}</Button>
-                <span className="flex items-center gap-2 text-xs text-muted-foreground">{profile.codigo_u}{isCommittee(profile.rol) && <Badge className={getRoleColor(profile.rol)}>{profile.rol}</Badge>}{!profile.activo && <Badge variant="secondary"><UserRoundMinusIcon />Inactivo</Badge>}</span>
+                <span className="flex items-center gap-2 text-xs text-muted-foreground">{profile.codigo_u}{isCommittee(profile.rol) && <Badge className={getRoleColor(profile.rol)}>{profile.rol}</Badge>}{!profile.activo && <Badge variant="secondary"><UserRoundMinusIcon />Inactivo</Badge>}{!profile.inscrito && <Badge variant="secondary">Sin inscripción</Badge>}</span>
               </div>
             </div>
           </TableCell>

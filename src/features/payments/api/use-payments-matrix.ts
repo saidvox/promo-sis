@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabase/client'
 import type { Database } from '@/types/database.types'
 import type { MesaResumen } from '@/types/mesas.types'
 
-type PerfilRow = Pick<Database['public']['Tables']['perfiles']['Row'], 'id' | 'nombre_completo' | 'dni' | 'rol' | 'codigo_u' | 'activo'>
+type PerfilRow = Pick<Database['public']['Tables']['perfiles']['Row'], 'id' | 'nombre_completo' | 'dni' | 'rol' | 'codigo_u' | 'activo'> & { inscrito?: boolean }
 type CuotaRow = Pick<Database['public']['Tables']['config_cuotas']['Row'], 'id' | 'mes_nombre' | 'monto' | 'fecha_vencimiento'>
 type PagoRow = Database['public']['Tables']['pagos']['Row']
 export type InscripcionLiteRow = Pick<
@@ -82,7 +82,7 @@ function buildEnrollmentMaps(enrollments: InscripcionLiteRow[]) {
  * 1. async-parallel mediante Promise.all
  * 2. js-index-maps generando un mapa de O(1) en cliente para la Matriz.
  */
-export const usePaymentsMatrix = () => {
+export const usePaymentsMatrix = (refreshInterval = 0) => {
   const fetcher = async (): Promise<MatrixData> => {
     const [perfilesResult, inscripcionesResult, cuotasResult, pagosResult, movementsResult, mesasResult] = await Promise.all([
       supabase
@@ -133,12 +133,13 @@ export const usePaymentsMatrix = () => {
       buildEnrollmentMaps(inscripciones)
 
     const mesasMap = Object.fromEntries((mesasResult.data ?? []).map((mesa) => [mesa.perfil_id, mesa]))
-    return { perfilesInscritos, cuotasPorMes, pagosMap, paymentMovementsMap, inscripcionesMap, inscripcionesDetailMap, mesasMap }
+    return { perfilesInscritos: perfilesInscritos.map(profile => ({...profile, inscrito: Boolean(inscripcionesDetailMap[profile.id])})), cuotasPorMes, pagosMap, paymentMovementsMap, inscripcionesMap, inscripcionesDetailMap, mesasMap }
   }
 
   const { data, error, isLoading, mutate } = useSWR<MatrixData, Error>(
     'api/payments-matrix',
-    fetcher
+    fetcher,
+    { refreshInterval }
   )
 
   return { data, error, isLoading, mutate }
