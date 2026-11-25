@@ -4,14 +4,14 @@ Aplicacion para gestionar participantes, pagos, egresos y cuotas de una promocio
 
 ## Requisitos
 
-- Node.js 20 o superior
+- Node.js 22.12 o superior
 - npm
 - Un proyecto de Supabase con las variables necesarias
 
 ## Configuracion
 
 1. Copia `.env.example` como `.env.local`.
-2. Completa `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY`.
+2. Completa `VITE_SUPABASE_URL` y `VITE_SUPABASE_PUBLISHABLE_KEY`. También se admite `VITE_SUPABASE_ANON_KEY` para proyectos que usan la clave pública anterior.
 3. Instala dependencias con `npm install`.
 
 La app falla al iniciar si las variables de Supabase no existen, para evitar conexiones accidentales a un proyecto incorrecto.
@@ -26,6 +26,19 @@ La app falla al iniciar si las variables de Supabase no existen, para evitar con
 ## Navegacion
 
 La navegacion interna usa `hash` en la URL, por ejemplo `#/payments` o `#/expenses`, para conservar la vista actual al recargar la pagina.
+
+## Publicación en Cloudflare
+
+El frontend se publica como archivos estáticos en [Promo-sis](https://promo-sis.saidvox.workers.dev). Desde la raíz del repositorio, con `.env.local` configurado para el Supabase correspondiente, genera la compilación:
+
+```sh
+npm ci
+npm run build
+```
+
+En Cloudflare, abre el Worker `promo-sis` y usa **New deployment** para subir el contenido de `dist`. También puedes publicarlo desde una sesión de Wrangler autorizada en la cuenta `saidvox` con `npx --yes wrangler@4.168.0 deploy`.
+
+Si automatizas la publicación, define `VITE_SUPABASE_URL` y `VITE_SUPABASE_PUBLISHABLE_KEY` en el entorno de compilación.
 
 ## Mesas e invitados
 

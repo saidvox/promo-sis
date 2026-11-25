@@ -26,6 +26,7 @@ dist-ssr
 *.sln
 *.sw?
 .vercel
+.wrangler/
 
 # Local tooling and visual checks
 /supabase/.temp/
